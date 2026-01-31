@@ -19,7 +19,15 @@
       "Bash(npx prisma studio:*)",
       "Bash(npm run seed:quick:*)",
       "Bash(npm run dev:*)",
-      "WebFetch(domain:www.goaudience.com)"
+      "WebFetch(domain:www.goaudience.com)",
+      "Bash(npx prisma db execute:*)",
+      "Bash(lsof:*)",
+      "WebFetch(domain:redash.trella.co)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(npx prisma db seed:*)"
     ]
   }
 }
