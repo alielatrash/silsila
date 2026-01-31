@@ -7,6 +7,12 @@ const resend = process.env.RESEND_API_KEY
 
 const FROM_EMAIL = process.env.EMAIL_FROM || 'Takt <noreply@teamtakt.app>'
 
+interface SendEmailParams {
+  to: string
+  subject: string
+  html: string
+}
+
 interface SendOTPEmailParams {
   to: string
   firstName: string
@@ -18,6 +24,37 @@ interface SendPasswordResetEmailParams {
   to: string
   firstName: string
   resetUrl: string
+}
+
+export async function sendEmail({ to, subject, html }: SendEmailParams) {
+  // In development without API key, log the email instead
+  if (!resend) {
+    console.log('='.repeat(50))
+    console.log(`EMAIL (dev mode - no Resend API key)`)
+    console.log(`To: ${to}`)
+    console.log(`Subject: ${subject}`)
+    console.log('='.repeat(50))
+    return { id: 'dev-mode' }
+  }
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to,
+      subject,
+      html,
+    })
+
+    if (error) {
+      console.error('Failed to send email:', error)
+      throw new Error(`Failed to send email: ${error.message}`)
+    }
+
+    return data
+  } catch (error) {
+    console.error('Email sending error:', error)
+    throw error
+  }
 }
 
 export async function sendPasswordResetEmail({ to, firstName, resetUrl }: SendPasswordResetEmailParams) {
