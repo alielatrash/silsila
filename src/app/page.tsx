@@ -277,7 +277,7 @@ export default function LandingPage() {
                 href="/register"
                 className="mb-6 block w-full rounded-lg border-2 border-blue-600 bg-white py-3 text-center font-semibold text-blue-600 transition-colors hover:bg-blue-50"
               >
-                Get Started
+                Start Free Trial
               </Link>
               <ul className="space-y-3 text-sm text-slate-600">
                 <li className="flex items-start gap-2">
@@ -320,7 +320,7 @@ export default function LandingPage() {
                 href="/register"
                 className="mb-6 block w-full rounded-lg bg-blue-600 py-3 text-center font-semibold text-white transition-colors hover:bg-blue-700"
               >
-                Get Started
+                Start Free Trial
               </Link>
               <ul className="space-y-3 text-sm text-slate-600">
                 <li className="flex items-start gap-2">
