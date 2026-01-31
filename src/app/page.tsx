@@ -262,117 +262,135 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-3">
+          <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-3">
             {/* Starter Plan */}
-            <div className="rounded-2xl border-2 border-slate-200 bg-white p-8 transition-all hover:shadow-xl">
+            <div className="rounded-xl border-2 border-slate-200 bg-white p-8 transition-all hover:border-blue-200 hover:shadow-lg">
+              <h3 className="mb-3 text-2xl font-bold text-slate-900">Starter</h3>
               <div className="mb-6">
-                <h3 className="mb-2 text-2xl font-bold text-slate-900">Starter</h3>
-                <p className="text-sm text-slate-600">Perfect for small teams getting started</p>
-              </div>
-              <div className="mb-6">
-                <div className="flex items-baseline">
-                  <span className="text-5xl font-bold text-slate-900">$499</span>
-                  <span className="ml-2 text-slate-600">/month</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-sm text-slate-600">SAR</span>
+                  <span className="text-5xl font-bold text-slate-900">999</span>
                 </div>
+                <p className="mt-2 text-sm text-slate-600">per month</p>
               </div>
-              <ul className="mb-8 space-y-4">
-                {[
-                  'Up to 5 users',
-                  'Weekly planning cycles',
-                  'Basic demand forecasting',
-                  'Supply commitment tracking',
-                  'Email support',
-                  '1 GB storage',
-                ].map((feature, i) => (
-                  <li key={i} className="flex items-center gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    <span className="text-slate-700">{feature}</span>
-                  </li>
-                ))}
-              </ul>
               <Link
                 href="/register"
-                className="block w-full rounded-lg border-2 border-blue-600 bg-white py-3 text-center font-semibold text-blue-600 transition-colors hover:bg-blue-50"
+                className="mb-6 block w-full rounded-lg border-2 border-blue-600 bg-white py-3 text-center font-semibold text-blue-600 transition-colors hover:bg-blue-50"
               >
-                Start Free Trial
+                Get Started
               </Link>
+              <ul className="space-y-3 text-sm text-slate-600">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                  <span>Up to 5 users</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                  <span>Weekly planning cycles</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                  <span>Basic demand forecasting</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                  <span>Supply tracking</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                  <span>Email support</span>
+                </li>
+              </ul>
             </div>
 
             {/* Professional Plan */}
-            <div className="relative rounded-2xl border-2 border-blue-600 bg-white p-8 shadow-xl transition-all hover:shadow-2xl">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-4 py-1 text-sm font-semibold text-white">
-                Most Popular
+            <div className="relative rounded-xl border-2 border-blue-600 bg-white p-8 shadow-xl transition-all hover:shadow-2xl">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
+                MOST POPULAR
               </div>
+              <h3 className="mb-3 text-2xl font-bold text-slate-900">Professional</h3>
               <div className="mb-6">
-                <h3 className="mb-2 text-2xl font-bold text-slate-900">Professional</h3>
-                <p className="text-sm text-slate-600">For growing transportation companies</p>
-              </div>
-              <div className="mb-6">
-                <div className="flex items-baseline">
-                  <span className="text-5xl font-bold text-slate-900">$999</span>
-                  <span className="ml-2 text-slate-600">/month</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-sm text-slate-600">SAR</span>
+                  <span className="text-5xl font-bold text-slate-900">1,999</span>
                 </div>
+                <p className="mt-2 text-sm text-slate-600">per month</p>
               </div>
-              <ul className="mb-8 space-y-4">
-                {[
-                  'Up to 20 users',
-                  'Advanced analytics',
-                  'Multi-route management',
-                  'Actuals tracking & reporting',
-                  'Priority email & chat support',
-                  '10 GB storage',
-                  'API access',
-                  'Custom integrations',
-                ].map((feature, i) => (
-                  <li key={i} className="flex items-center gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    <span className="text-slate-700">{feature}</span>
-                  </li>
-                ))}
-              </ul>
               <Link
                 href="/register"
-                className="block w-full rounded-lg bg-blue-600 py-3 text-center font-semibold text-white transition-colors hover:bg-blue-700"
+                className="mb-6 block w-full rounded-lg bg-blue-600 py-3 text-center font-semibold text-white transition-colors hover:bg-blue-700"
               >
-                Start Free Trial
+                Get Started
               </Link>
+              <ul className="space-y-3 text-sm text-slate-600">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                  <span>Up to 20 users</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                  <span>Advanced analytics</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                  <span>Multi-route management</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                  <span>Actuals tracking</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                  <span>Priority support</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                  <span>API access</span>
+                </li>
+              </ul>
             </div>
 
             {/* Enterprise Plan */}
-            <div className="rounded-2xl border-2 border-slate-200 bg-white p-8 transition-all hover:shadow-xl">
-              <div className="mb-6">
-                <h3 className="mb-2 text-2xl font-bold text-slate-900">Enterprise</h3>
-                <p className="text-sm text-slate-600">For large-scale operations</p>
-              </div>
+            <div className="rounded-xl border-2 border-slate-200 bg-white p-8 transition-all hover:border-blue-200 hover:shadow-lg">
+              <h3 className="mb-3 text-2xl font-bold text-slate-900">Enterprise</h3>
               <div className="mb-6">
                 <div className="flex items-baseline">
                   <span className="text-5xl font-bold text-slate-900">Custom</span>
                 </div>
+                <p className="mt-2 text-sm text-slate-600">tailored to your needs</p>
               </div>
-              <ul className="mb-8 space-y-4">
-                {[
-                  'Unlimited users',
-                  'Dedicated account manager',
-                  'Custom workflows',
-                  'Advanced security & compliance',
-                  '24/7 phone & email support',
-                  'Unlimited storage',
-                  'Custom API integrations',
-                  'SLA guarantees',
-                  'On-premise deployment option',
-                ].map((feature, i) => (
-                  <li key={i} className="flex items-center gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    <span className="text-slate-700">{feature}</span>
-                  </li>
-                ))}
-              </ul>
               <Link
                 href="#contact"
-                className="block w-full rounded-lg border-2 border-slate-900 bg-slate-900 py-3 text-center font-semibold text-white transition-colors hover:bg-slate-800"
+                className="mb-6 block w-full rounded-lg border-2 border-slate-900 bg-slate-900 py-3 text-center font-semibold text-white transition-colors hover:bg-slate-800"
               >
                 Contact Sales
               </Link>
+              <ul className="space-y-3 text-sm text-slate-600">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                  <span>Unlimited users</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                  <span>Dedicated account manager</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                  <span>Custom workflows</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                  <span>Advanced security</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                  <span>24/7 support</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                  <span>SLA guarantees</span>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
