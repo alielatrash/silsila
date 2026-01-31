@@ -9,7 +9,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Silsila',
+  title: 'Takt',
   description: 'Demand and Supply Planning for Transportation',
 }
 

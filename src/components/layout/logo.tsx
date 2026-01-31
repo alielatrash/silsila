@@ -16,8 +16,8 @@ export function Logo({ className, size = 'md' }: LogoProps) {
   return (
     <div className={cn('relative', sizeClasses[size], className)}>
       <Image
-        src="/silsila-logo.png"
-        alt="Silsila Logo"
+        src="/takt-emblem-1-blue.png"
+        alt="Takt Logo"
         fill
         className="object-contain"
         priority

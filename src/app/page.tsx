@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { Logo } from '@/components/layout/logo'
 import {
   BarChart3,
@@ -28,8 +27,8 @@ export default function LandingPage() {
         <div className="container mx-auto flex h-20 items-center justify-between px-6">
           <div className="flex items-center gap-2.5">
             <Image
-              src="/silsila-logo-2.png"
-              alt="Silsila"
+              src="/takt-logo-blue.png"
+              alt="Takt"
               width={120}
               height={40}
               className="h-10 w-auto"
@@ -282,9 +281,14 @@ export default function LandingPage() {
         <div className="container mx-auto px-6 py-12">
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <div className="mb-4 flex items-center gap-2.5">
-                <Logo size="sm" />
-                <span className="font-bold">Silsila</span>
+              <div className="mb-4">
+                <Image
+                  src="/takt-logo-white.png"
+                  alt="Takt"
+                  width={100}
+                  height={32}
+                  className="h-8 w-auto"
+                />
               </div>
               <p className="text-sm text-slate-400">
                 Weekly demand and supply planning for transportation companies.
@@ -311,7 +315,7 @@ export default function LandingPage() {
             <div>
               <h4 className="mb-4 text-sm font-bold text-blue-400">Contact</h4>
               <ul className="space-y-2 text-sm text-slate-400">
-                <li>hello@trella.com</li>
+                <li>support@teamtakt.app</li>
                 <li>+1 (234) 567-890</li>
                 <li>123 Supply Chain Ave</li>
                 <li>San Francisco, CA 94102</li>
@@ -324,7 +328,7 @@ export default function LandingPage() {
               <Link href="#" className="transition-colors hover:text-white">Terms of Service</Link>
               <Link href="#" className="transition-colors hover:text-white">Cookie Policy</Link>
             </div>
-            © {new Date().getFullYear()} Silsila Planning. All rights reserved.
+            © {new Date().getFullYear()} Takt Planning. All rights reserved.
           </div>
         </div>
       </footer>
