@@ -288,13 +288,18 @@ export async function DELETE(
     }
 
     // Delete related records that don't have cascade delete
-    // ActivityEvent and AdminAuditLog don't cascade
+    // ActivityEvent, AdminAuditLog, and AuditLog don't cascade
     await prisma.activityEvent.deleteMany({
       where: { actorUserId: userId },
     })
 
     await prisma.adminAuditLog.deleteMany({
       where: { targetType: 'user', targetId: userId },
+    })
+
+    // Delete user's own audit logs
+    await prisma.auditLog.deleteMany({
+      where: { userId: userId },
     })
 
     // Create audit log BEFORE deleting the user
