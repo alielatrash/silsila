@@ -241,3 +241,113 @@ export async function PATCH(
     )
   }
 }
+
+/**
+ * DELETE /api/superadmin/users/[userId]
+ *
+ * Permanently delete a user
+ * Platform admin only
+ */
+
+const deleteUserSchema = z.object({
+  reason: z.string().optional(),
+})
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ userId: string }> }
+) {
+  try {
+    const { session } = await requirePlatformAdmin()
+    const { userId } = await params
+    const body = await request.json()
+
+    const validated = deleteUserSchema.parse(body)
+
+    // Fetch user before deletion
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        isActive: true,
+        role: true,
+      },
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'User not found' },
+        },
+        { status: 404 }
+      )
+    }
+
+    // Delete related records that don't have cascade delete
+    // ActivityEvent and AdminAuditLog don't cascade
+    await prisma.activityEvent.deleteMany({
+      where: { actorUserId: userId },
+    })
+
+    await prisma.adminAuditLog.deleteMany({
+      where: { targetType: 'user', targetId: userId },
+    })
+
+    // Create audit log BEFORE deleting the user
+    await createAdminAuditLog({
+      adminUserId: session.user.id,
+      adminEmail: session.user.email,
+      actionType: 'user.delete',
+      targetType: 'user',
+      targetId: userId,
+      targetName: user.email,
+      beforeState: { user },
+      afterState: null,
+      reason: validated.reason,
+    })
+
+    // Delete the user (cascade will handle sessions, memberships, audit logs, etc.)
+    await prisma.user.delete({
+      where: { id: userId },
+    })
+
+    return NextResponse.json({
+      success: true,
+      data: { message: 'User deleted successfully' },
+    })
+  } catch (error: any) {
+    console.error('Superadmin user delete error:', error)
+
+    if (error.message.includes('FORBIDDEN')) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'Platform admin access required' },
+        },
+        { status: 403 }
+      )
+    }
+
+    if (error.name === 'ZodError') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: 'Invalid request data' },
+        },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to delete user' },
+      },
+      { status: 500 }
+    )
+  }
+}
