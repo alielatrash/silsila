@@ -217,7 +217,23 @@ export async function POST(request: Request) {
     let orgName: string
 
     if (existingDomain) {
-      // AUTO-JOIN existing organization
+      // User is joining existing organization - require role selection
+      if (!role) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: 'ROLE_REQUIRED',
+              message: 'Please select your role',
+              needsRoleSelection: true,
+              organizationName: existingDomain.organization.name,
+            },
+          },
+          { status: 400 }
+        )
+      }
+
+      // AUTO-JOIN existing organization with selected role
       organizationId = existingDomain.organizationId
       orgRole = 'MEMBER'
       orgName = existingDomain.organization.name

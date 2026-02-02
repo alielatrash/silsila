@@ -33,10 +33,13 @@ export function RegisterForm() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [needsOrgCreation, setNeedsOrgCreation] = useState(false)
+  const [needsRoleSelection, setNeedsRoleSelection] = useState(false)
+  const [joiningOrgName, setJoiningOrgName] = useState('')
   const [suggestedOrgName, setSuggestedOrgName] = useState('')
   const [organizationName, setOrganizationName] = useState('')
   const [formData, setFormData] = useState<RegisterInput | null>(null)
   const [showPassword, setShowPassword] = useState(false)
+  const [selectedRole, setSelectedRole] = useState<'DEMAND_PLANNER' | 'SUPPLY_PLANNER' | 'ADMIN'>('DEMAND_PLANNER')
 
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -68,6 +71,15 @@ export function RegisterForm() {
           setNeedsOrgCreation(true)
           setSuggestedOrgName(result.error.suggestedOrgName || '')
           setOrganizationName(result.error.suggestedOrgName || '')
+          setFormData(data)
+          setIsLoading(false)
+          return
+        }
+
+        // Check if joining existing org and needs role selection
+        if (result.error.needsRoleSelection) {
+          setNeedsRoleSelection(true)
+          setJoiningOrgName(result.error.organizationName || '')
           setFormData(data)
           setIsLoading(false)
           return
@@ -117,6 +129,78 @@ export function RegisterForm() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleJoinWithRole = async () => {
+    if (!formData) return
+
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, role: selectedRole }),
+        credentials: 'include',
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        toast.error(result.error.message)
+        return
+      }
+
+      toast.success(result.data.message)
+      router.push('/')
+      router.refresh()
+    } catch (error) {
+      toast.error('Something went wrong. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Show role selection for joining existing org
+  if (needsRoleSelection && formData) {
+    return (
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">Select Your Role</CardTitle>
+          <CardDescription>
+            You're joining <strong>{joiningOrgName}</strong>. Please select your role.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Your Role</Label>
+              <Select value={selectedRole} onValueChange={(value: any) => setSelectedRole(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DEMAND_PLANNER">Demand Planner</SelectItem>
+                  <SelectItem value="SUPPLY_PLANNER">Supply Planner</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleJoinWithRole} className="w-full" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Join Organization
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setNeedsRoleSelection(false)}
+              className="w-full"
+              disabled={isLoading}
+            >
+              Back
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   // Show onboarding wizard for new organizations
@@ -239,29 +323,6 @@ export function RegisterForm() {
                       />
                     </div>
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Your Role</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your role" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="DEMAND_PLANNER">Demand Planner</SelectItem>
-                      <SelectItem value="SUPPLY_PLANNER">Supply Planner</SelectItem>
-                      <SelectItem value="ADMIN">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
