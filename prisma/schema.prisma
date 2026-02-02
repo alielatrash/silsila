@@ -137,7 +137,7 @@ model Invitation {
 model AuditLog {
   id         String   @id @default(cuid())
   userId     String
-  user       User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   action     String // e.g., "demand_forecast.create", "supply.update"
   entityType String // e.g., "DemandForecast", "SupplyCommitment"
   entityId   String?
