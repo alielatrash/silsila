@@ -27,11 +27,6 @@ export async function GET(request: Request) {
     // Find invitation
     const invitation = await prisma.invitation.findUnique({
       where: { token },
-      include: {
-        organization: {
-          select: { id: true, name: true },
-        },
-      },
     })
 
     if (!invitation) {
@@ -60,11 +55,17 @@ export async function GET(request: Request) {
       )
     }
 
+    // Fetch organization separately
+    const organization = await prisma.organization.findUnique({
+      where: { id: invitation.organizationId },
+      select: { id: true, name: true },
+    })
+
     return NextResponse.json({
       success: true,
       data: {
         email: invitation.email,
-        organizationName: invitation.organization?.name,
+        organizationName: organization?.name,
         role: invitation.functionalRole,
       },
     })
@@ -102,9 +103,6 @@ export async function POST(request: Request) {
     // Find invitation
     const invitation = await prisma.invitation.findUnique({
       where: { token },
-      include: {
-        organization: true,
-      },
     })
 
     if (!invitation) {
@@ -132,6 +130,12 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
+
+    // Fetch organization for success message
+    const organization = await prisma.organization.findUnique({
+      where: { id: invitation.organizationId },
+      select: { name: true },
+    })
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -203,7 +207,7 @@ export async function POST(request: Request) {
       {
         success: true,
         data: {
-          message: `Successfully joined ${invitation.organization?.name}`,
+          message: `Successfully joined ${organization?.name}`,
         },
       },
       { status: 201 }
