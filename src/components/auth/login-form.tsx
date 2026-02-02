@@ -51,7 +51,17 @@ export function LoginForm() {
       }
 
       toast.success('Login successful')
-      router.push('/dashboard')
+
+      // Check if user is platform admin
+      const isPlatformAdmin = result.data.isPlatformAdmin || false
+
+      // Redirect platform admins to superadmin dashboard
+      if (isPlatformAdmin) {
+        router.push('/superadmin')
+      } else {
+        router.push('/dashboard')
+      }
+
       router.refresh()
     } catch (error) {
       toast.error('Something went wrong. Please try again.')
