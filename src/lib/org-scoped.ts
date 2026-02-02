@@ -1,4 +1,5 @@
 import type { Session } from '@/types'
+import { prisma } from './prisma'
 
 /**
  * Helper function to create organization-scoped where clauses
@@ -44,5 +45,29 @@ export function verifyOrgOwnership(session: Session, entity: any) {
   }
   if (entity.organizationId !== session.user.currentOrgId) {
     throw new Error('Access denied: Entity belongs to different organization')
+  }
+}
+
+/**
+ * Check if the current user's organization is suspended
+ * Throws an error if the organization is suspended
+ * Use this at the beginning of API route handlers
+ *
+ * @example
+ * const session = await getSession()
+ * await checkOrgSuspension(session)
+ */
+export async function checkOrgSuspension(session: Session) {
+  if (!session.user.currentOrgId) {
+    return // No org to check
+  }
+
+  const org = await prisma.organization.findUnique({
+    where: { id: session.user.currentOrgId },
+    select: { status: true, suspendedReason: true },
+  })
+
+  if (org?.status === 'SUSPENDED') {
+    throw new Error(`Organization suspended: ${org.suspendedReason || 'Contact support'}`)
   }
 }
