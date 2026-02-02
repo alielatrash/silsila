@@ -14,8 +14,8 @@ datasource db {
 // ============ AUTHENTICATION & USERS ============
 
 model User {
-  id                  String   @id @default(cuid())
-  email               String   @unique
+  id                  String    @id @default(cuid())
+  email               String    @unique
   passwordHash        String? // Bcrypt hashed password
   firstName           String
   lastName            String
@@ -23,10 +23,11 @@ model User {
   avatarUrl           String? // Cloudinary URL
   role                UserRole
   currentOrgId        String? // Current organization context
-  onboardingCompleted Boolean  @default(false) // Track if user completed onboarding
-  isActive            Boolean  @default(true)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  onboardingCompleted Boolean   @default(false) // Track if user completed onboarding
+  isActive            Boolean   @default(true)
+  lastActivityAt      DateTime? // Last time user was active (for admin tracking)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   // Relations
   sessions                Session[]
@@ -43,6 +44,7 @@ model User {
   @@index([role])
   @@index([currentOrgId])
   @@index([onboardingCompleted])
+  @@index([lastActivityAt])
 }
 
 enum UserRole {
@@ -185,6 +187,12 @@ model Organization {
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
+  // Platform Admin: Organization Suspension
+  status          OrgStatus @default(ACTIVE) // ACTIVE or SUSPENDED
+  suspendedAt     DateTime?
+  suspendedReason String? // Reason for suspension
+  suspendedBy     String? // Platform admin user ID
+
   // Stripe Integration
   stripeCustomerId            String?       @unique // Stripe customer ID
   stripeSubscriptionId        String?       @unique // Current Stripe subscription ID
@@ -192,6 +200,10 @@ model Organization {
   currentBillingCycle         BillingCycle? // MONTHLY or ANNUAL
   subscriptionCurrentPeriodEnd DateTime? // When current billing period ends
   subscriptionCancelAtPeriodEnd Boolean @default(false) // True if downgrade/cancellation scheduled
+
+  // Billing overrides (for platform admin)
+  priceOverride Int? // Override price in cents (null = use standard pricing)
+  seatLimit     Int? // Max users allowed (null = unlimited)
 
   // Relations
   domains           OrganizationDomain[]
@@ -204,14 +216,21 @@ model Organization {
   demandForecasts   DemandForecast[]
   supplyCommitments SupplyCommitment[]
   subscriptionEvents SubscriptionEvent[]
+  activityEvents    ActivityEvent[]
 
   @@index([slug])
   @@index([isActive])
   @@index([country])
   @@index([subscriptionTier])
   @@index([subscriptionStatus])
+  @@index([status])
   @@index([stripeCustomerId])
   @@index([stripeSubscriptionId])
+}
+
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED
 }
 
 enum SubscriptionTier {
@@ -665,4 +684,73 @@ model FleetPartnerCompletion {
   @@index([citym])
   @@index([completionDate])
   @@index([supplierName])
+}
+
+// ============ PLATFORM ADMIN ============
+
+// Platform Admins: Users who can access cross-org superadmin dashboard
+model PlatformAdmin {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  email     String   @unique // Redundant but useful for quick lookups
+  role      PlatformAdminRole @default(ADMIN)
+  createdAt DateTime @default(now())
+  createdBy String? // userId who granted admin access
+  revokedAt DateTime? // If access was revoked
+  revokedBy String? // userId who revoked access
+
+  @@index([userId])
+  @@index([email])
+  @@index([role])
+}
+
+enum PlatformAdminRole {
+  ADMIN // Standard platform admin
+  SUPER_ADMIN // Full access (future: can manage other admins)
+}
+
+// Activity Events: Track key user actions across the platform
+model ActivityEvent {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actorUserId    String // User who performed the action
+  actorEmail     String // Denormalized for reporting
+  eventType      String // e.g., "user.login", "demand.create", "supply.update"
+  entityType     String? // e.g., "DemandForecast", "SupplyCommitment", "User"
+  entityId       String? // ID of affected entity
+  metadata       Json? // Additional context (old/new values, etc.)
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([actorUserId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([organizationId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
+// Admin Audit Log: Track all platform admin actions
+model AdminAuditLog {
+  id           String   @id @default(cuid())
+  adminUserId  String // Platform admin who performed the action
+  adminEmail   String // Denormalized for reporting
+  actionType   String // e.g., "org.suspend", "org.unsuspend", "org.change_plan"
+  targetType   String // "organization", "user", "subscription"
+  targetId     String // ID of affected entity
+  targetName   String? // Name for display (org name, user email, etc.)
+  beforeState  Json? // State before action
+  afterState   Json? // State after action
+  reason       String? // Admin's reason/note for the action
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  @@index([adminUserId])
+  @@index([actionType])
+  @@index([targetType, targetId])
+  @@index([createdAt])
+  @@index([adminUserId, createdAt])
 }

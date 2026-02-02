@@ -4,6 +4,7 @@ import { verifyPassword } from '@/lib/password'
 import { createSession, setSessionCookie } from '@/lib/auth'
 import { createAuditLog, AuditAction } from '@/lib/audit'
 import { loginSchema } from '@/lib/validations/auth'
+import { headers } from 'next/headers'
 
 export async function POST(request: Request) {
   try {
@@ -98,12 +99,19 @@ export async function POST(request: Request) {
     }
 
     // Ensure user has currentOrgId set
+    const currentOrgId = user.currentOrgId || memberships[0].organizationId
     if (!user.currentOrgId) {
       await prisma.user.update({
         where: { id: user.id },
         data: { currentOrgId: memberships[0].organizationId },
       })
     }
+
+    // Update lastActivityAt
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastActivityAt: new Date() },
+    })
 
     // Create session and set cookie
     const userAgent = request.headers.get('user-agent') || undefined
@@ -117,6 +125,22 @@ export async function POST(request: Request) {
       entityType: 'User',
       entityId: user.id,
       metadata: { email: normalizedEmail },
+    })
+
+    // Activity log for platform admin visibility
+    const headersList = await headers()
+    await prisma.activityEvent.create({
+      data: {
+        organizationId: currentOrgId,
+        actorUserId: user.id,
+        actorEmail: user.email,
+        eventType: 'user.login',
+        ipAddress: headersList.get('x-forwarded-for') || headersList.get('x-real-ip') || null,
+        userAgent: userAgent || null,
+      },
+    }).catch(() => {
+      // Don't fail login if activity logging fails
+      console.error('Failed to log activity event')
     })
 
     return NextResponse.json({
