@@ -39,6 +39,7 @@ import type { DemandForecast, Party, Location, ResourceType } from '@prisma/clie
 import { format, addWeeks, startOfMonth } from 'date-fns'
 import { ClientQuickCreateDialog } from '@/components/repositories/client-quick-create-dialog'
 import { CityQuickCreateDialog } from '@/components/repositories/city-quick-create-dialog'
+import { TruckTypeQuickCreateDialog } from '@/components/repositories/truck-type-quick-create-dialog'
 
 const MONTH_WEEKS = [
   { key: 'week1', label: 'Week 1' },
@@ -65,6 +66,7 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
   const [isClientDialogOpen, setIsClientDialogOpen] = useState(false)
   const [isPickupCityDialogOpen, setIsPickupCityDialogOpen] = useState(false)
   const [isDropoffCityDialogOpen, setIsDropoffCityDialogOpen] = useState(false)
+  const [isTruckTypeDialogOpen, setIsTruckTypeDialogOpen] = useState(false)
 
   // Only fetch data when dialog is open (prevents loading too many records on page load)
   const { data: clients } = useClients({ isActive: true, pageSize: 10000 }, open)
@@ -377,6 +379,18 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
                       placeholder="Search truck type..."
                       searchPlaceholder="Type to search..."
                       emptyText="No truck types found."
+                      footerAction={
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start text-xs"
+                          onClick={() => setIsTruckTypeDialogOpen(true)}
+                        >
+                          <Plus className="mr-2 h-3 w-3" />
+                          Add new truck type
+                        </Button>
+                      }
                     />
                   </FormControl>
                   <FormMessage />
@@ -483,6 +497,15 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
         onSuccess={(city) => {
           form.setValue('dropoffCityId', city.id)
           toast.success(`City "${city.name}" selected for dropoff`)
+        }}
+      />
+
+      <TruckTypeQuickCreateDialog
+        open={isTruckTypeDialogOpen}
+        onOpenChange={setIsTruckTypeDialogOpen}
+        onSuccess={(truckType) => {
+          form.setValue('truckTypeId', truckType.id)
+          toast.success(`Truck type "${truckType.name}" selected`)
         }}
       />
     </Dialog>
