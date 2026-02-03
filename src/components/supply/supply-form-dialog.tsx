@@ -300,25 +300,31 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
                             name={`day${index + 1}Committed` as keyof CreateSupplyCommitmentInput}
                             render={({ field }) => (
                               <FormItem className="space-y-1">
-                                <div className="flex flex-col items-center gap-0.5">
+                                <div className="flex flex-col items-center">
                                   <FormLabel className="text-[11px] text-muted-foreground">
                                     {day.label}
                                   </FormLabel>
                                   <div className="h-[14px] flex items-center justify-center">
-                                    {remaining > 0 && (
-                                      <span className="text-[10px] font-bold leading-none text-red-600">
-                                        {remaining}
-                                      </span>
-                                    )}
-                                    {remaining === 0 && gap > 0 && (
-                                      <span className="text-[10px] font-bold leading-none text-emerald-600">
-                                        ✓
-                                      </span>
-                                    )}
-                                    {remaining < 0 && (
-                                      <span className="text-[10px] font-bold leading-none text-emerald-600">
-                                        +{Math.abs(remaining)}
-                                      </span>
+                                    {gap > 0 ? (
+                                      <>
+                                        {remaining > 0 && (
+                                          <span className="text-[10px] font-bold leading-none text-red-600">
+                                            {remaining}
+                                          </span>
+                                        )}
+                                        {remaining === 0 && (
+                                          <span className="text-[10px] font-bold leading-none text-emerald-600">
+                                            ✓
+                                          </span>
+                                        )}
+                                        {remaining < 0 && (
+                                          <span className="text-[10px] font-bold leading-none text-emerald-600">
+                                            +{Math.abs(remaining)}
+                                          </span>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <span className="text-[10px] font-bold leading-none invisible">0</span>
                                     )}
                                   </div>
                                 </div>
