@@ -76,27 +76,6 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
     [suppliers]
   )
 
-  // Calculate week date ranges for monthly planning
-  const weekDateRanges = useMemo(() => {
-    if (!isMonthlyPlanning || !planningWeeksData?.data || !planningWeekId) return []
-
-    const selectedWeek = planningWeeksData.data.find(w => w.id === planningWeekId)
-    if (!selectedWeek) return []
-
-    const monthStart = new Date(selectedWeek.weekStart)
-
-    return MONTH_WEEKS.map((_, index) => {
-      const weekStartDate = addWeeks(monthStart, index)
-      const weekEndDate = addWeeks(weekStartDate, 1)
-      weekEndDate.setDate(weekEndDate.getDate() - 1) // End on the last day of the week
-
-      return {
-        start: format(weekStartDate, 'd'),  // Just day number
-        end: format(weekEndDate, 'd')       // Just day number
-      }
-    })
-  }, [isMonthlyPlanning, planningWeeksData, planningWeekId])
-
   const form = useForm<CreateSupplyCommitmentInput>({
     resolver: zodResolver(createSupplyCommitmentSchema),
     defaultValues: {
@@ -138,32 +117,8 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
     }
   }, [open, planningWeekId, routeKey, form])
 
-  // Watch form values to calculate resulting gap in real-time
+  // Watch form values for real-time feedback
   const formValues = form.watch()
-
-  // Calculate resulting gap after adding this commitment
-  const resultingGap = useMemo(() => {
-    if (!targetData) return null
-
-    if (isMonthlyPlanning) {
-      return {
-        week1: targetData.gap.week1 - (formValues.week1Committed || 0),
-        week2: targetData.gap.week2 - (formValues.week2Committed || 0),
-        week3: targetData.gap.week3 - (formValues.week3Committed || 0),
-        week4: targetData.gap.week4 - (formValues.week4Committed || 0),
-      }
-    } else {
-      return {
-        day1: targetData.gap.day1 - (formValues.day1Committed || 0),
-        day2: targetData.gap.day2 - (formValues.day2Committed || 0),
-        day3: targetData.gap.day3 - (formValues.day3Committed || 0),
-        day4: targetData.gap.day4 - (formValues.day4Committed || 0),
-        day5: targetData.gap.day5 - (formValues.day5Committed || 0),
-        day6: targetData.gap.day6 - (formValues.day6Committed || 0),
-        day7: targetData.gap.day7 - (formValues.day7Committed || 0),
-      }
-    }
-  }, [targetData, formValues, isMonthlyPlanning])
 
   const onSubmit = async (data: CreateSupplyCommitmentInput) => {
     try {
@@ -220,58 +175,163 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
               )}
             />
 
-            {/* Simple Summary */}
             {targetData && (
-              <div className="rounded-lg border bg-muted/50 p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold">Supply Needed</h4>
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Total Gap: </span>
-                    <span className={`font-bold ${targetData.gap.total > 0 ? 'text-red-600' : targetData.gap.total < 0 ? 'text-amber-600' : 'text-green-600'}`}>
-                      {targetData.gap.total > 0 ? `${targetData.gap.total} needed` : targetData.gap.total < 0 ? `${Math.abs(targetData.gap.total)} excess` : 'Fulfilled'}
+              <div className="space-y-3">
+                {/* Summary Bar */}
+                <div className="flex items-center gap-6 px-3 py-2 rounded-lg bg-muted/30 text-sm">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-muted-foreground text-xs">Target</span>
+                    <span className="font-semibold">{targetData.target.total}</span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-muted-foreground text-xs">Current</span>
+                    <span className="font-semibold text-emerald-600">{targetData.committed.total}</span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-muted-foreground text-xs">Gap</span>
+                    <span className={`font-bold ${targetData.gap.total > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                      {targetData.gap.total}
                     </span>
                   </div>
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  Enter commitment quantities below. Red badges show current gaps.
+
+                {/* Commitment Inputs */}
+                <div>
+                  <FormLabel className="text-sm mb-2 block">
+                    {isMonthlyPlanning ? 'Weekly Commitment' : 'Daily Commitment'}
+                  </FormLabel>
+                  {isMonthlyPlanning ? (
+                    <div className="grid grid-cols-4 gap-3">
+                      {MONTH_WEEKS.map((week, index) => {
+                        const gap = targetData.gap[`week${index + 1}` as keyof typeof targetData.gap] || 0
+                        const newCommit = formValues[`week${index + 1}Committed` as keyof typeof formValues] as number || 0
+                        const remaining = Math.max(0, gap - newCommit)
+
+                        return (
+                          <FormField
+                            key={week.key}
+                            control={form.control}
+                            name={`week${index + 1}Committed` as any}
+                            render={({ field }) => (
+                              <FormItem className="space-y-1.5">
+                                <div className="flex items-baseline justify-between">
+                                  <FormLabel className="text-xs text-muted-foreground">
+                                    {week.label}
+                                  </FormLabel>
+                                  {remaining > 0 && (
+                                    <span className="text-[10px] font-semibold text-red-600">
+                                      {remaining} left
+                                    </span>
+                                  )}
+                                  {gap > 0 && remaining === 0 && newCommit > 0 && (
+                                    <span className="text-[10px] font-semibold text-emerald-600">
+                                      ✓
+                                    </span>
+                                  )}
+                                </div>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    placeholder="0"
+                                    className={`text-center h-11 text-base transition-colors ${
+                                      gap > 0
+                                        ? remaining > 0
+                                          ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                                          : 'border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500'
+                                        : ''
+                                    }`}
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                  />
+                                </FormControl>
+                                {gap > 0 && (
+                                  <div className="text-center text-[10px] text-muted-foreground">
+                                    need {gap}
+                                  </div>
+                                )}
+                              </FormItem>
+                            )}
+                          />
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-7 gap-2">
+                      {WEEK_DAYS.map((day, index) => {
+                        const gap = targetData.gap[`day${index + 1}` as keyof typeof targetData.gap] || 0
+                        const newCommit = formValues[`day${index + 1}Committed` as keyof typeof formValues] as number || 0
+                        const remaining = Math.max(0, gap - newCommit)
+
+                        return (
+                          <FormField
+                            key={day.key}
+                            control={form.control}
+                            name={`day${index + 1}Committed` as keyof CreateSupplyCommitmentInput}
+                            render={({ field }) => (
+                              <FormItem className="space-y-1">
+                                <div className="flex flex-col items-center gap-0.5 min-h-[28px]">
+                                  <FormLabel className="text-[11px] text-muted-foreground">
+                                    {day.label}
+                                  </FormLabel>
+                                  {gap > 0 && (
+                                    <span className={`text-[10px] font-bold leading-none ${
+                                      remaining > 0 ? 'text-red-600' : 'text-emerald-600'
+                                    }`}>
+                                      {remaining > 0 ? remaining : '✓'}
+                                    </span>
+                                  )}
+                                </div>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    placeholder="0"
+                                    className={`text-center h-10 transition-colors ${
+                                      gap > 0
+                                        ? remaining > 0
+                                          ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                                          : 'border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500'
+                                        : ''
+                                    }`}
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-            <div>
-              <FormLabel>{isMonthlyPlanning ? 'Supply Commitment (Weeks 1-4)' : 'Supply Commitment (Sun-Sat)'}</FormLabel>
-              {isMonthlyPlanning ? (
-                <div className="grid grid-cols-4 gap-3 mt-2">
-                  {MONTH_WEEKS.map((week, index) => {
-                    const gap = targetData?.gap[`week${index + 1}` as keyof typeof targetData.gap] || 0
-                    const target = targetData?.target[`week${index + 1}` as keyof typeof targetData.target] || 0
-                    const committed = targetData?.committed[`week${index + 1}` as keyof typeof targetData.committed] || 0
-                    return (
+            {!targetData && (
+              <div>
+                <FormLabel className="text-sm mb-2 block">
+                  {isMonthlyPlanning ? 'Weekly Commitment' : 'Daily Commitment'}
+                </FormLabel>
+                {isMonthlyPlanning ? (
+                  <div className="grid grid-cols-4 gap-3">
+                    {MONTH_WEEKS.map((week, index) => (
                       <FormField
                         key={week.key}
                         control={form.control}
                         name={`week${index + 1}Committed` as any}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs font-medium flex items-center justify-between">
-                              <span>{week.label}</span>
-                              {gap > 0 && (
-                                <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-semibold">
-                                  need {gap}
-                                </span>
-                              )}
+                            <FormLabel className="text-xs text-muted-foreground">
+                              {week.label}
                             </FormLabel>
-                            {targetData && (
-                              <div className="text-[10px] text-muted-foreground mb-1">
-                                Target: {target} • Committed: {committed}
-                              </div>
-                            )}
                             <FormControl>
                               <Input
                                 type="number"
                                 min="0"
                                 placeholder="0"
-                                className="text-center h-12 text-base"
+                                className="text-center h-11"
                                 {...field}
                                 onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                               />
@@ -279,35 +339,20 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
                           </FormItem>
                         )}
                       />
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="grid grid-cols-7 gap-2 mt-2">
-                  {WEEK_DAYS.map((day, index) => {
-                    const gap = targetData?.gap[`day${index + 1}` as keyof typeof targetData.gap] || 0
-                    const target = targetData?.target[`day${index + 1}` as keyof typeof targetData.target] || 0
-                    const committed = targetData?.committed[`day${index + 1}` as keyof typeof targetData.committed] || 0
-                    return (
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-7 gap-2">
+                    {WEEK_DAYS.map((day, index) => (
                       <FormField
                         key={day.key}
                         control={form.control}
                         name={`day${index + 1}Committed` as keyof CreateSupplyCommitmentInput}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs font-medium flex flex-col gap-0.5">
-                              <span>{day.label}</span>
-                              {gap > 0 && (
-                                <span className="text-[10px] bg-red-100 text-red-700 px-1 py-0.5 rounded text-center font-semibold">
-                                  -{gap}
-                                </span>
-                              )}
+                            <FormLabel className="text-[11px] text-muted-foreground text-center block">
+                              {day.label}
                             </FormLabel>
-                            {targetData && (
-                              <div className="text-[9px] text-muted-foreground mb-1 leading-tight">
-                                {target}/{committed}
-                              </div>
-                            )}
                             <FormControl>
                               <Input
                                 type="number"
@@ -321,11 +366,11 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
                           </FormItem>
                         )}
                       />
-                    )
-                  })}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
