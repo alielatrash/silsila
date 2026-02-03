@@ -213,11 +213,9 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
                     <span className={`font-bold ${
                       dynamicRemainingGap > 0
                         ? 'text-red-600'
-                        : dynamicRemainingGap < 0
-                        ? 'text-amber-600'
                         : 'text-emerald-600'
                     }`}>
-                      {dynamicRemainingGap}
+                      {dynamicRemainingGap > 0 ? dynamicRemainingGap : dynamicRemainingGap < 0 ? `+${Math.abs(dynamicRemainingGap)}` : dynamicRemainingGap}
                     </span>
                   </div>
                 </div>
@@ -245,18 +243,19 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
                                   <FormLabel className="text-xs text-muted-foreground">
                                     {week.label}
                                   </FormLabel>
-                                  {remaining !== 0 && newCommit > 0 && (
-                                    <span className={`text-[10px] font-semibold ${
-                                      remaining > 0
-                                        ? 'text-red-600'
-                                        : 'text-amber-600'
-                                    }`}>
-                                      {remaining > 0 ? `${remaining} left` : `${Math.abs(remaining)} over`}
+                                  {remaining > 0 && newCommit > 0 && (
+                                    <span className="text-[10px] font-semibold text-red-600">
+                                      {remaining} left
                                     </span>
                                   )}
                                   {remaining === 0 && newCommit > 0 && (
                                     <span className="text-[10px] font-semibold text-emerald-600">
                                       ✓
+                                    </span>
+                                  )}
+                                  {remaining < 0 && (
+                                    <span className="text-[10px] font-semibold text-emerald-600">
+                                      +{Math.abs(remaining)} over
                                     </span>
                                   )}
                                 </div>
@@ -268,9 +267,7 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
                                     className={`text-center h-11 text-base transition-colors ${
                                       remaining > 0
                                         ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                                        : remaining < 0
-                                        ? 'border-amber-300 focus:border-amber-500 focus:ring-amber-500'
-                                        : newCommit > 0
+                                        : (remaining <= 0 && newCommit > 0)
                                         ? 'border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500'
                                         : ''
                                     }`}
@@ -303,24 +300,27 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
                             name={`day${index + 1}Committed` as keyof CreateSupplyCommitmentInput}
                             render={({ field }) => (
                               <FormItem className="space-y-1">
-                                <div className="flex flex-col items-center justify-end gap-0.5 min-h-[32px]">
+                                <div className="flex flex-col items-center gap-0.5">
                                   <FormLabel className="text-[11px] text-muted-foreground">
                                     {day.label}
                                   </FormLabel>
-                                  {remaining !== 0 && newCommit > 0 && (
-                                    <span className={`text-[10px] font-bold leading-none ${
-                                      remaining > 0
-                                        ? 'text-red-600'
-                                        : 'text-amber-600'
-                                    }`}>
-                                      {remaining > 0 ? remaining : Math.abs(remaining)}
-                                    </span>
-                                  )}
-                                  {remaining === 0 && newCommit > 0 && (
-                                    <span className="text-[10px] font-bold leading-none text-emerald-600">
-                                      ✓
-                                    </span>
-                                  )}
+                                  <div className="h-[14px] flex items-center">
+                                    {remaining > 0 && newCommit > 0 && (
+                                      <span className="text-[10px] font-bold leading-none text-red-600">
+                                        {remaining}
+                                      </span>
+                                    )}
+                                    {remaining === 0 && newCommit > 0 && (
+                                      <span className="text-[10px] font-bold leading-none text-emerald-600">
+                                        ✓
+                                      </span>
+                                    )}
+                                    {remaining < 0 && (
+                                      <span className="text-[10px] font-bold leading-none text-emerald-600">
+                                        +{Math.abs(remaining)}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                                 <FormControl>
                                   <Input
@@ -330,9 +330,7 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
                                     className={`text-center h-10 transition-colors ${
                                       remaining > 0
                                         ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                                        : remaining < 0
-                                        ? 'border-amber-300 focus:border-amber-500 focus:ring-amber-500'
-                                        : newCommit > 0
+                                        : (remaining <= 0 && newCommit > 0)
                                         ? 'border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500'
                                         : ''
                                     }`}
