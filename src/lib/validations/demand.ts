@@ -5,7 +5,7 @@ export const createDemandForecastSchema = z.object({
   clientId: z.string().min(1, 'Client is required'),
   pickupCityId: z.string().min(1, 'Pickup city is required'),
   dropoffCityId: z.string().min(1, 'Dropoff city is required'),
-  demandCategoryId: z.string().optional().transform(val => val === '' ? undefined : val),
+  demandCategoryId: z.string().or(z.undefined()),
   truckTypeIds: z.array(z.string().min(1)).min(1, 'At least one truck type is required'),
   // Daily loads (for weekly planning)
   day1Loads: z.number().min(0).optional(),
@@ -38,7 +38,7 @@ export const updateDemandForecastSchema = z.object({
   week3Loads: z.number().min(0).optional(),
   week4Loads: z.number().min(0).optional(),
   week5Loads: z.number().min(0).optional(),
-  demandCategoryId: z.string().optional().transform(val => val === '' ? undefined : val),
+  demandCategoryId: z.string().or(z.undefined()),
   truckTypeIds: z.array(z.string().min(1)).optional(),
 })
 
