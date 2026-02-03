@@ -35,6 +35,7 @@ interface ComboboxProps {
   className?: string
   footerAction?: React.ReactNode
   onSearchChange?: (search: string) => void
+  serverSideSearch?: boolean
 }
 
 export function Combobox({
@@ -48,6 +49,7 @@ export function Combobox({
   className,
   footerAction,
   onSearchChange,
+  serverSideSearch = false,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [searchValue, setSearchValue] = React.useState('')
@@ -91,6 +93,8 @@ export function Combobox({
             <CommandGroup>
               {options
                 .filter((option) => {
+                  // Skip client-side filtering if server-side search is enabled
+                  if (serverSideSearch) return true
                   if (!searchValue) return true
                   const searchLower = searchValue.toLowerCase()
                   const labelMatch = option.label.toLowerCase().includes(searchLower)

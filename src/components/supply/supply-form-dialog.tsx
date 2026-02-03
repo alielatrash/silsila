@@ -57,21 +57,26 @@ interface SupplyFormDialogProps {
 
 export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey, targetData }: SupplyFormDialogProps) {
   const [isSupplierDialogOpen, setIsSupplierDialogOpen] = useState(false)
+  const [supplierSearch, setSupplierSearch] = useState('')
 
-  // Only fetch suppliers when dialog is open
-  const { data: suppliers } = useSuppliers({ isActive: true, pageSize: 100 }, open)
+  // Fetch suppliers with server-side search
+  const { data: suppliers } = useSuppliers({
+    isActive: true,
+    pageSize: 50,
+    q: supplierSearch || undefined
+  }, open)
   const { data: planningWeeksData } = usePlanningWeeks()
   const createMutation = useCreateSupplyCommitment()
 
   const planningCycle = planningWeeksData?.meta?.planningCycle || 'WEEKLY'
   const isMonthlyPlanning = planningCycle === 'MONTHLY'
 
-  // Transform data for combobox
+  // Transform data for combobox (don't show UUID)
   const supplierOptions = useMemo(() =>
     suppliers?.data?.map((supplier) => ({
       value: supplier.id,
       label: supplier.name,
-      description: supplier.uniqueIdentifier || undefined,
+      description: undefined, // Don't show UUID
     })) ?? [],
     [suppliers]
   )
@@ -174,6 +179,8 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
                       options={supplierOptions}
                       value={field.value}
                       onValueChange={field.onChange}
+                      onSearchChange={setSupplierSearch}
+                      serverSideSearch={true}
                       placeholder="Search supplier..."
                       searchPlaceholder="Type to search..."
                       emptyText="No suppliers found."
