@@ -80,18 +80,39 @@ export async function PATCH(request: Request) {
 
     const data = validation.data
 
+    // Check if mobile number is being changed and if it's already used by another user
+    if (data.mobileNumber) {
+      const existingMobileUser = await prisma.user.findFirst({
+        where: {
+          mobileNumber: data.mobileNumber,
+          id: { not: session.user.id }, // Exclude current user
+        },
+      })
+
+      if (existingMobileUser) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: 'MOBILE_EXISTS',
+              message: 'This mobile number is already registered to another account',
+            },
+          },
+          { status: 409 }
+        )
+      }
+    }
+
     // Build update object (only include fields that were provided)
     const updateData: {
       firstName?: string
       lastName?: string
-      mobileNumber?: string | null
+      mobileNumber?: string
     } = {}
 
     if (data.firstName !== undefined) updateData.firstName = data.firstName
     if (data.lastName !== undefined) updateData.lastName = data.lastName
-    if (data.mobileNumber !== undefined) {
-      updateData.mobileNumber = data.mobileNumber === '' ? null : data.mobileNumber
-    }
+    if (data.mobileNumber !== undefined) updateData.mobileNumber = data.mobileNumber
 
     // Get current user data for audit log
     const currentUser = await prisma.user.findUnique({

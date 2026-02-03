@@ -5,9 +5,11 @@ export const updateProfileSchema = z.object({
   lastName: z.string().min(1, 'Last name is required').max(50, 'Last name must be less than 50 characters').optional(),
   mobileNumber: z
     .string()
-    .regex(/^\+?[1-9]\d{7,14}$/, 'Invalid mobile number format')
-    .optional()
-    .or(z.literal('')),
+    .min(1, 'Mobile number is required')
+    .refine(
+      (val) => /^\+[1-9]\d{7,14}$/.test(val),
+      'Invalid mobile number format'
+    ),
 })
 
 export const changePasswordSchema = z.object({

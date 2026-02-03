@@ -7,13 +7,13 @@ import { updateProfileSchema, type UpdateProfileInput } from '@/lib/validations/
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { PhoneInput } from '@/components/ui/phone-input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -95,13 +95,13 @@ export function ProfileForm({ profile }: ProfileFormProps) {
               name="mobileNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Mobile Number</FormLabel>
+                  <FormLabel>Phone Number *</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="+1234567890" />
+                    <PhoneInput
+                      value={field.value}
+                      onChange={(value) => field.onChange(value)}
+                    />
                   </FormControl>
-                  <FormDescription>
-                    Optional. Include country code for international numbers.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
