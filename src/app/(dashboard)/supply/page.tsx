@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Download, Trash2 } from 'lucide-react'
+import { Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/layout'
 import { WeekSelector } from '@/components/demand/week-selector'
@@ -9,22 +9,14 @@ import { SupplyTable } from '@/components/supply/supply-table'
 import { SupplyFormDialog } from '@/components/supply/supply-form-dialog'
 import { usePlanningWeeks } from '@/hooks/use-demand'
 import { useSupplyTargets } from '@/hooks/use-supply'
-import { useAuth } from '@/hooks/use-auth'
-import { toast } from 'sonner'
-import { useQueryClient } from '@tanstack/react-query'
 
 export default function SupplyPlanningPage() {
   const [selectedWeekId, setSelectedWeekId] = useState<string>()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedCitym, setSelectedCitym] = useState<string>('')
-  const [isCleaningUp, setIsCleaningUp] = useState(false)
 
-  const queryClient = useQueryClient()
-  const { data: authData } = useAuth()
   const { data: weeksData } = usePlanningWeeks()
   const { data: targetsData, isLoading } = useSupplyTargets(selectedWeekId)
-
-  const isAdmin = authData?.user?.role === 'ADMIN'
 
   // Auto-select first (current) week
   useEffect(() => {
@@ -116,33 +108,6 @@ export default function SupplyPlanningPage() {
     document.body.removeChild(link)
   }
 
-  const handleCleanupOrphaned = async () => {
-    if (!selectedWeekId) return
-    if (!confirm('This will remove supply commitments that have no corresponding demand forecasts. Continue?')) return
-
-    setIsCleaningUp(true)
-    try {
-      const response = await fetch('/api/admin/cleanup-supply', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planningWeekId: selectedWeekId }),
-      })
-      const result = await response.json()
-
-      if (result.success) {
-        toast.success(result.data.message)
-        queryClient.invalidateQueries({ queryKey: ['supplyTargets'] })
-        queryClient.invalidateQueries({ queryKey: ['dispatchSheet'] })
-      } else {
-        toast.error(result.error?.message || 'Failed to cleanup')
-      }
-    } catch (error) {
-      toast.error('Failed to cleanup orphaned supply commitments')
-    } finally {
-      setIsCleaningUp(false)
-    }
-  }
-
   // Calculate summary metrics
   const totalTarget = targetsData?.data?.reduce((sum, t) => sum + t.target.total, 0) ?? 0
   const totalCommitted = targetsData?.data?.reduce((sum, t) => sum + t.committed.total, 0) ?? 0
@@ -158,17 +123,6 @@ export default function SupplyPlanningPage() {
         description="Manage supplier commitments by route (CITYm)"
       >
         <WeekSelector value={selectedWeekId} onValueChange={setSelectedWeekId} />
-        {isAdmin && (
-          <Button
-            variant="outline"
-            onClick={handleCleanupOrphaned}
-            disabled={!selectedWeekId || isCleaningUp}
-            className="text-destructive hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4" />
-            {isCleaningUp ? 'Cleaning...' : 'Cleanup Orphaned'}
-          </Button>
-        )}
         <Button variant="outline" onClick={handleDownload} disabled={!targetsData?.data?.length}>
           <Download className="h-4 w-4" />
           Download
