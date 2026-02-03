@@ -127,7 +127,7 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
     clients?.data?.map((client) => ({
       value: client.id,
       label: client.name,
-      description: client.uniqueIdentifier || undefined,
+      // Don't show UUID - it's internal identifier only
     })) ?? [],
     [clients]
   )

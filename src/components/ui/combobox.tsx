@@ -88,7 +88,7 @@ export function Combobox({
             value={searchValue}
             onValueChange={handleSearchChange}
           />
-          <CommandList className="max-h-[300px] overflow-y-scroll">
+          <CommandList className="max-h-[300px] overflow-y-auto">
             <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
               {options
