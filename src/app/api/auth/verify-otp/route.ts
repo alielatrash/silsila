@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        memberships: {
+        organizationMemberships: {
           include: {
             organization: true,
           },
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
     await setSessionCookie(token)
 
     // Get organization name for response
-    const organizationName = user.memberships[0]?.organization?.name || 'Unknown'
+    const organizationName = user.organizationMemberships[0]?.organization?.name || 'Unknown'
 
     // Audit log
     await createAuditLog({
