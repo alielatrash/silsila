@@ -304,13 +304,13 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
                                   <FormLabel className="text-[11px] text-muted-foreground">
                                     {day.label}
                                   </FormLabel>
-                                  <div className="h-[14px] flex items-center">
-                                    {remaining > 0 && newCommit > 0 && (
+                                  <div className="h-[14px] flex items-center justify-center">
+                                    {remaining > 0 && (
                                       <span className="text-[10px] font-bold leading-none text-red-600">
                                         {remaining}
                                       </span>
                                     )}
-                                    {remaining === 0 && newCommit > 0 && (
+                                    {remaining === 0 && gap > 0 && (
                                       <span className="text-[10px] font-bold leading-none text-emerald-600">
                                         ✓
                                       </span>
