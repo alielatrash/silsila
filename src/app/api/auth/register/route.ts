@@ -12,6 +12,7 @@ import {
   extractOrgNameFromDomain,
   generateSlug,
 } from '@/lib/domain'
+import { PlanningCycle } from '@prisma/client'
 
 export async function POST(request: Request) {
   try {
@@ -134,6 +135,7 @@ export async function POST(request: Request) {
         data: organizationSettings ? {
           organizationId: org.id,
           ...organizationSettings,
+          planningCycle: organizationSettings.planningCycle as PlanningCycle,
         } : {
           organizationId: org.id,
           locationLabel: 'City',
@@ -333,6 +335,7 @@ export async function POST(request: Request) {
         data: organizationSettings ? {
           organizationId: org.id,
           ...organizationSettings,
+          planningCycle: organizationSettings.planningCycle as PlanningCycle,
         } : {
           organizationId: org.id,
           locationLabel: 'City',
