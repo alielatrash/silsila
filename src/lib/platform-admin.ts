@@ -27,8 +27,11 @@ const ALLOWLISTED_EMAILS = process.env.PLATFORM_SUPERADMINS?.split(',').map(e =>
  */
 export async function getPlatformAdmin(userId: string) {
   // Check database first
-  const platformAdmin = await prisma.platformAdmin.findUnique({
-    where: { userId, revokedAt: null },
+  const platformAdmin = await prisma.platformAdmin.findFirst({
+    where: {
+      userId,
+      revokedAt: null,
+    },
   })
 
   if (platformAdmin) {

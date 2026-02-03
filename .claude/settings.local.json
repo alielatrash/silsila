@@ -42,7 +42,16 @@
       "Bash(node /tmp/check-db.mjs:*)",
       "Bash(node check-db.mjs:*)",
       "Bash(npm run db:push:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(psql:*)",
+      "Bash(vercel env pull:*)",
+      "Bash(host:*)",
+      "Bash(nslookup:*)",
+      "Bash(echo:*)",
+      "Bash(npx prisma validate:*)",
+      "Bash(node -e:*)",
+      "Bash(kill:*)",
+      "Bash(git restore:*)"
     ]
   }
 }
