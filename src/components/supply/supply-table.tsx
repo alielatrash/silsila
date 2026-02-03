@@ -50,14 +50,14 @@ interface SupplyTarget {
   commitments: Array<{
     id: string
     party: { id: string; name: string; code: string | null }
-    day1: number
-    day2: number
-    day3: number
-    day4: number
-    day5: number
-    day6: number
-    day7: number
-    total: number
+    day1Committed: number
+    day2Committed: number
+    day3Committed: number
+    day4Committed: number
+    day5Committed: number
+    day6Committed: number
+    day7Committed: number
+    totalCommitted: number
   }>
 }
 
@@ -176,20 +176,20 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
   if (isLoading) {
     const columnCount = isMonthlyPlanning ? 4 : 7
     return (
-      <div className="rounded-md border">
+      <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-8"></TableHead>
-              <TableHead>Route</TableHead>
-              <TableHead className="w-20">Plan</TableHead>
+              <TableHead className="w-56 font-semibold">Route</TableHead>
+              <TableHead className="w-24 font-semibold">Plan</TableHead>
               {isMonthlyPlanning ? (
                 MONTH_WEEKS.map((week) => (
-                  <TableHead key={week.key} className="text-center w-20">{week.label}</TableHead>
+                  <TableHead key={week.key} className="text-center w-20 font-semibold">{week.label}</TableHead>
                 ))
               ) : (
                 WEEK_DAYS.map((day, index) => (
-                  <TableHead key={day.key} className="text-center w-16">
+                  <TableHead key={day.key} className="text-center w-16 font-semibold">
                     <div className="flex flex-col items-center gap-0.5">
                       <span>{day.label}</span>
                       {dayDates[index] && (
@@ -201,8 +201,8 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
                   </TableHead>
                 ))
               )}
-              <TableHead className="text-center">Total</TableHead>
-              <TableHead className="w-10"></TableHead>
+              <TableHead className="text-center font-semibold w-20">Total</TableHead>
+              <TableHead className="w-20"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -229,16 +229,18 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
   }
 
   return (
-    <div className="rounded-md border overflow-x-auto">
+    <div className="rounded-md border overflow-x-auto bg-white">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="w-8"></TableHead>
-            <TableHead className="sticky left-0 bg-background">Route</TableHead>
-            <TableHead className="w-20">Plan</TableHead>
+            <TableHead className="sticky left-0 bg-card w-56 font-semibold">Route</TableHead>
+            <TableHead className="w-20 font-semibold text-center">Status</TableHead>
+            <TableHead className="w-16 font-semibold text-center">Gap</TableHead>
+            <TableHead className="w-24 font-semibold">Plan</TableHead>
             {isMonthlyPlanning ? (
               MONTH_WEEKS.map((week, index) => (
-                <TableHead key={week.key} className="text-center w-20">
+                <TableHead key={week.key} className="text-center w-20 font-semibold">
                   <div className="flex flex-col items-center gap-0.5">
                     <span>{week.label}</span>
                     {weekDateRanges[index] && (
@@ -251,7 +253,7 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
               ))
             ) : (
               WEEK_DAYS.map((day, index) => (
-                <TableHead key={day.key} className="text-center w-16">
+                <TableHead key={day.key} className="text-center w-16 font-semibold">
                   <div className="flex flex-col items-center gap-0.5">
                     <span>{day.label}</span>
                     {dayDates[index] && (
@@ -263,181 +265,229 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
                 </TableHead>
               ))
             )}
-            <TableHead className="text-center font-semibold">Total</TableHead>
-            <TableHead className="w-10"></TableHead>
+            <TableHead className="text-center font-semibold w-20">Total</TableHead>
+            <TableHead className="w-20"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.map((target) => {
+          {data.flatMap((target, targetIndex) => {
             const isExpanded = expandedRows.has(target.routeKey)
+            const baseRowIndex = targetIndex * 3
 
-            return (
-              <React.Fragment key={target.routeKey}>
-                {/* Target Row */}
-                <TableRow className="bg-slate-50/50 hover:bg-slate-50">
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 hover:bg-slate-200"
-                      onClick={() => toggleRow(target.routeKey)}
-                    >
-                      {isExpanded ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
+            const rows: JSX.Element[] = []
+
+            // Target Row
+            rows.push(
+              <TableRow key={`${target.routeKey}-target`} className="bg-transparent hover:bg-muted/30">
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                    onClick={() => toggleRow(target.routeKey)}
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </Button>
+                </TableCell>
+                <TableCell className="sticky left-0 bg-white font-medium w-56 max-w-[200px] truncate">
+                  {formatCitym(target.routeKey)}
+                </TableCell>
+                <TableCell className="text-center">
+                  <span className={cn(
+                    "inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap min-w-[130px]",
+                    target.gapPercent <= 0 && "bg-green-50 text-green-700 border border-green-200",
+                    target.gapPercent > 0 && "bg-red-50 text-red-700 border border-red-200"
+                  )}>
+                    {target.gapPercent <= 0 && "CAPACITY FILLED"}
+                    {target.gapPercent > 0 && "FILL RISK"}
+                  </span>
+                </TableCell>
+                <TableCell className="text-center">
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    target.gapPercent > 0 && "text-red-600 dark:text-red-400",
+                    target.gapPercent < 0 && "text-emerald-700 dark:text-emerald-500",
+                    target.gapPercent === 0 && "text-muted-foreground"
+                  )}>
+                    {target.gapPercent}%
+                  </span>
+                </TableCell>
+                <TableCell className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Target</TableCell>
+                {WEEK_DAYS.map((day, index) => {
+                  const key = `day${index + 1}` as keyof typeof target.target
+                  return (
+                    <TableCell key={day.key} className="text-center font-medium">
+                      {target.target[key]}
+                    </TableCell>
+                  )
+                })}
+                <TableCell className="text-center font-semibold">
+                  {target.target.total}
+                </TableCell>
+                <TableCell></TableCell>
+              </TableRow>
+            )
+
+            // Committed Row
+            rows.push(
+              <TableRow key={`${target.routeKey}-committed`} className="bg-transparent hover:bg-muted/30">
+                <TableCell></TableCell>
+                <TableCell className="sticky left-0 bg-white"></TableCell>
+                <TableCell></TableCell>
+                <TableCell></TableCell>
+                <TableCell className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Committed</TableCell>
+                {WEEK_DAYS.map((day, index) => {
+                  const key = `day${index + 1}` as keyof typeof target.committed
+                  return (
+                    <TableCell key={day.key} className="text-center font-medium text-emerald-700 dark:text-emerald-500">
+                      {target.committed[key]}
+                    </TableCell>
+                  )
+                })}
+                <TableCell className="text-center font-semibold text-emerald-700 dark:text-emerald-500">
+                  {target.committed.total}
+                </TableCell>
+                <TableCell>
+                  <Button
+                    size="sm"
+                    className="h-7 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    onClick={() => onAddCommitment(target.routeKey)}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span className="text-xs font-semibold">Add</span>
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )
+
+            // Gap Row
+            rows.push(
+              <TableRow key={`${target.routeKey}-gap`} className={cn(
+                "bg-transparent hover:bg-muted/30",
+                // Add border if not expanded
+                !isExpanded && "border-b-[3px] border-border"
+              )}>
+                <TableCell></TableCell>
+                <TableCell className="sticky left-0 bg-white"></TableCell>
+                <TableCell></TableCell>
+                <TableCell></TableCell>
+                <TableCell className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Gap</TableCell>
+                {WEEK_DAYS.map((day, index) => {
+                  const key = `day${index + 1}` as keyof typeof target.gap
+                  const value = target.gap[key]
+                  return (
+                    <TableCell
+                      key={day.key}
+                      className={cn(
+                        'text-center font-medium',
+                        value !== 0 && 'text-red-600 dark:text-red-400',
+                        value === 0 && 'text-muted-foreground'
                       )}
-                    </Button>
-                  </TableCell>
-                  <TableCell className="sticky left-0 bg-slate-50/50 font-medium text-slate-900">
-                    {formatCitym(target.routeKey)}
-                  </TableCell>
-                  <TableCell className="text-xs font-medium uppercase tracking-wide text-slate-500">Target</TableCell>
-                  {WEEK_DAYS.map((day, index) => {
-                    const key = `day${index + 1}` as keyof typeof target.target
-                    return (
-                      <TableCell key={day.key} className="text-center font-medium text-slate-700">
-                        {target.target[key]}
-                      </TableCell>
-                    )
-                  })}
-                  <TableCell className="text-center font-semibold text-slate-900">
-                    {target.target.total}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="h-8 bg-green-600 hover:bg-green-700 text-white gap-1.5 font-medium shadow-sm"
-                      onClick={() => onAddCommitment(target.routeKey)}
                     >
-                      <Plus className="h-4 w-4" />
-                      <span className="text-xs">Add</span>
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                      {value}
+                    </TableCell>
+                  )
+                })}
+                <TableCell
+                  className={cn(
+                    'text-center bg-muted/30 font-semibold',
+                    target.gap.total !== 0 && 'text-red-600 dark:text-red-400',
+                    target.gap.total === 0 && 'text-muted-foreground'
+                  )}
+                >
+                  {target.gap.total}
+                </TableCell>
+                <TableCell></TableCell>
+              </TableRow>
+            )
 
-                {/* Committed Row */}
-                <TableRow className="hover:bg-slate-50/30">
+            // Client Breakdown Rows (expandable)
+            if (isExpanded && target.clients?.length > 0) {
+              // Client header row
+              rows.push(
+                <TableRow key={`${target.routeKey}-clients-header`} className="bg-muted/15 border-t border-border/50">
                   <TableCell></TableCell>
-                  <TableCell></TableCell>
-                  <TableCell className="text-xs font-medium uppercase tracking-wide text-slate-500">Committed</TableCell>
-                  {WEEK_DAYS.map((day, index) => {
-                    const key = `day${index + 1}` as keyof typeof target.committed
-                    return (
-                      <TableCell key={day.key} className="text-center font-medium text-emerald-600">
-                        {target.committed[key]}
-                      </TableCell>
-                    )
-                  })}
-                  <TableCell className="text-center font-semibold text-emerald-600">
-                    {target.committed.total}
-                  </TableCell>
-                  <TableCell></TableCell>
-                </TableRow>
-
-                {/* Gap Row */}
-                <TableRow className="border-b-4 border-slate-800 hover:bg-slate-50/30">
-                  <TableCell></TableCell>
-                  <TableCell></TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Gap</span>
-                      {target.gapPercent > 0 && (
-                        <span className="text-xs font-semibold text-red-600">
-                          {target.gapPercent}%
-                        </span>
-                      )}
+                  <TableCell colSpan={12} className="py-1.5 px-2">
+                    <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                      Target Breakdown by Client
                     </div>
                   </TableCell>
-                  {WEEK_DAYS.map((day, index) => {
-                    const key = `day${index + 1}` as keyof typeof target.gap
-                    const value = target.gap[key]
-                    return (
-                      <TableCell
-                        key={day.key}
-                        className={cn(
-                          'text-center font-medium',
-                          value > 0 && 'text-red-600',
-                          value < 0 && 'text-amber-600',
-                          value === 0 && 'text-slate-400'
-                        )}
-                      >
-                        {value}
-                      </TableCell>
-                    )
-                  })}
-                  <TableCell
+                </TableRow>
+              )
+
+              // Client data rows
+              target.clients.forEach((clientData, idx) => {
+                const isLastClient = idx === target.clients.length - 1
+                const shouldShowBorder = isLastClient && !target.commitments?.length
+
+                rows.push(
+                  <TableRow key={`${target.routeKey}-client-${idx}`} className={cn(
+                    "bg-muted/10 hover:bg-muted/20",
+                    shouldShowBorder && "border-b-[3px] border-border"
+                  )}>
+                    <TableCell></TableCell>
+                    <TableCell className="sticky left-0 bg-muted/10 pl-8 text-sm">
+                      {clientData.client.name}
+                    </TableCell>
+                    <TableCell></TableCell>
+                    <TableCell></TableCell>
+                    <TableCell></TableCell>
+                    {WEEK_DAYS.map((day, index) => {
+                      const dayKey = `day${index + 1}` as keyof typeof clientData
+                      const value = clientData[dayKey] as number
+                      return (
+                        <TableCell key={day.key} className="text-center text-sm">
+                          {value}
+                        </TableCell>
+                      )
+                    })}
+                    <TableCell className="text-center text-sm font-medium">
+                      {clientData.total}
+                    </TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
+                )
+              })
+            }
+
+            // Supplier Commitment Rows (expandable)
+            if (isExpanded && target.commitments?.length > 0) {
+              // Commitments header row
+              rows.push(
+                <TableRow key={`${target.routeKey}-commitments-header`} className="bg-emerald-50/50 border-t border-emerald-200/50">
+                  <TableCell></TableCell>
+                  <TableCell colSpan={12} className="py-1.5 px-2">
+                    <div className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide">
+                      Supplier Commitments
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )
+
+              // Commitment data rows
+              target.commitments.forEach((commitment, idx) => {
+                rows.push(
+                  <TableRow
+                    key={commitment.id}
                     className={cn(
-                      'text-center font-semibold',
-                      target.gap.total > 0 && 'text-red-600',
-                      target.gap.total < 0 && 'text-amber-600',
-                      target.gap.total === 0 && 'text-slate-400'
+                      "bg-emerald-50/20 hover:bg-emerald-50/40",
+                      // Add clear separator to last commitment row
+                      idx === target.commitments.length - 1 && "border-b-[3px] border-border"
                     )}
                   >
-                    {target.gap.total}
-                  </TableCell>
-                  <TableCell></TableCell>
-                </TableRow>
-
-                {/* Client Breakdown Rows (expandable) */}
-                {isExpanded && target.clients?.length > 0 && (
-                  <>
-                    <TableRow className="bg-slate-50">
-                      <TableCell></TableCell>
-                      <TableCell colSpan={10} className="py-2">
-                        <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                          Target Breakdown by Client
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    {target.clients.map((clientData, idx) => (
-                      <TableRow key={`${target.routeKey}-client-${idx}`} className="bg-slate-50/30 hover:bg-slate-50">
-                        <TableCell></TableCell>
-                        <TableCell className="pl-8 text-sm text-slate-700">
-                          {clientData.client.name}
-                        </TableCell>
-                        <TableCell></TableCell>
-                        {WEEK_DAYS.map((day, index) => {
-                          const dayKey = `day${index + 1}` as keyof typeof clientData
-                          const value = clientData[dayKey] as number
-                          return (
-                            <TableCell key={day.key} className="text-center text-sm text-slate-600">
-                              {value}
-                            </TableCell>
-                          )
-                        })}
-                        <TableCell className="text-center text-sm font-medium text-slate-700">
-                          {clientData.total}
-                        </TableCell>
-                        <TableCell></TableCell>
-                      </TableRow>
-                    ))}
-                  </>
-                )}
-
-                {/* Supplier Commitment Rows (expandable) */}
-                {isExpanded && target.commitments?.length > 0 && (
-                  <>
-                    <TableRow className="bg-emerald-50/50">
-                      <TableCell></TableCell>
-                      <TableCell colSpan={10} className="py-2">
-                        <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                          Supplier Commitments
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  </>
-                )}
-                {isExpanded && target.commitments.map((commitment) => (
-                  <TableRow key={commitment.id} className="bg-emerald-50/30 hover:bg-emerald-50/50">
                     <TableCell></TableCell>
-                    <TableCell className="pl-8 text-sm text-slate-700">
+                    <TableCell className="sticky left-0 bg-emerald-50/20 pl-8 text-sm">
                       {commitment.party.name}
                     </TableCell>
                     <TableCell></TableCell>
+                    <TableCell></TableCell>
+                    <TableCell></TableCell>
                     {WEEK_DAYS.map((day, index) => {
-                      const dayKey = `day${index + 1}` as keyof typeof commitment
+                      const dayKey = `day${index + 1}Committed` as keyof typeof commitment
                       const value = commitment[dayKey] as number
                       const isEditing = editingCell?.id === commitment.id && editingCell?.day === dayKey
 
@@ -451,13 +501,13 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
                                 value={editValue}
                                 onChange={(e) => setEditValue(e.target.value)}
                                 onKeyDown={(e) => handleKeyDown(e, commitment.id, dayKey)}
-                                className="h-7 w-14 text-center text-sm"
+                                className="h-7 w-14 text-center text-sm border-primary/50 focus:border-primary"
                                 autoFocus
                               />
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                className="h-7 w-7 text-emerald-600 dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
                                 onClick={() => handleSaveEdit(commitment.id, dayKey)}
                               >
                                 <Check className="h-3.5 w-3.5" />
@@ -465,7 +515,7 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                 onClick={handleCancelEdit}
                               >
                                 <X className="h-3.5 w-3.5" />
@@ -474,7 +524,7 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
                           ) : (
                             <button
                               onClick={() => handleCellClick(commitment.id, dayKey, value)}
-                              className="w-full h-7 hover:bg-emerald-100 rounded px-2 transition-colors text-sm font-medium text-slate-700"
+                              className="w-full h-7 hover:bg-primary/10 hover:text-primary rounded px-2 transition-colors font-medium"
                             >
                               {value}
                             </button>
@@ -482,21 +532,23 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
                         </TableCell>
                       )
                     })}
-                    <TableCell className="text-center text-sm font-medium text-slate-700">{commitment.total}</TableCell>
+                    <TableCell className="text-center text-sm font-medium">{commitment.totalCommitted}</TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         onClick={() => handleDeleteCommitment(commitment.id, commitment.party.name)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))}
-              </React.Fragment>
-            )
+                )
+              })
+            }
+
+            return rows
           })}
         </TableBody>
       </Table>

@@ -27,6 +27,7 @@ interface OnboardingWizardProps {
     lastName: string
     mobileNumber?: string
   }
+  onVerificationRequired?: (userId: string, email: string) => void
 }
 
 interface OnboardingData {
@@ -116,7 +117,7 @@ const INDUSTRY_PRESETS = {
   },
 }
 
-export function OnboardingWizard({ initialData }: OnboardingWizardProps) {
+export function OnboardingWizard({ initialData, onVerificationRequired }: OnboardingWizardProps) {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
@@ -172,8 +173,8 @@ export function OnboardingWizard({ initialData }: OnboardingWizardProps) {
         demandCategoryLabelPlural: pluralize(data.demandCategoryLabel),
         demandCategoryEnabled: data.demandCategoryEnabled,
         demandCategoryRequired: false, // Default to not required
-        planningCycle: data.planningCycle,
-        weekStartDay: data.weekStartDay,
+        planningCycle: data.planningCycle.toUpperCase(), // Convert to uppercase for Prisma enum
+        weekStartDay: data.weekStartDay.toUpperCase(), // Convert to uppercase for Prisma enum
       }
 
       const response = await fetch('/api/auth/register', {
@@ -193,6 +194,19 @@ export function OnboardingWizard({ initialData }: OnboardingWizardProps) {
 
       if (!result.success) {
         toast.error(result.error.message)
+        return
+      }
+
+      // Check if email verification is required
+      if (result.data.requiresVerification) {
+        console.log('OTP verification required:', result.data.userId)
+        toast.success('Verification code sent to your email')
+        if (onVerificationRequired) {
+          console.log('Calling onVerificationRequired callback')
+          onVerificationRequired(result.data.userId, initialData.email)
+        } else {
+          console.error('onVerificationRequired callback is not defined!')
+        }
         return
       }
 

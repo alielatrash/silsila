@@ -1,9 +1,10 @@
 'use client'
 
 import * as React from 'react'
-import { Check, ChevronsUpDown } from 'lucide-react'
+import { Check, ChevronsUpDown, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
   Command,
   CommandEmpty,
@@ -18,16 +19,16 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 
-export interface ComboboxOption {
+export interface MultiSelectOption {
   value: string
   label: string
   description?: string
 }
 
-interface ComboboxProps {
-  options: ComboboxOption[]
-  value?: string
-  onValueChange?: (value: string) => void
+interface MultiSelectComboboxProps {
+  options: MultiSelectOption[]
+  value?: string[]
+  onValueChange?: (value: string[]) => void
   placeholder?: string
   searchPlaceholder?: string
   emptyText?: string
@@ -35,30 +36,43 @@ interface ComboboxProps {
   className?: string
   footerAction?: React.ReactNode
   onSearchChange?: (search: string) => void
-  serverSideSearch?: boolean
+  maxDisplay?: number
 }
 
-export function Combobox({
+export function MultiSelectCombobox({
   options,
-  value,
+  value = [],
   onValueChange,
-  placeholder = 'Select option...',
+  placeholder = 'Select options...',
   searchPlaceholder = 'Search...',
   emptyText = 'No results found.',
   disabled,
   className,
   footerAction,
   onSearchChange,
-  serverSideSearch = false,
-}: ComboboxProps) {
+  maxDisplay = 2,
+}: MultiSelectComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [searchValue, setSearchValue] = React.useState('')
 
-  const selectedOption = options.find((option) => option.value === value)
+  const selectedOptions = options.filter((option) => value.includes(option.value))
 
   const handleSearchChange = (search: string) => {
     setSearchValue(search)
     onSearchChange?.(search)
+  }
+
+  const handleSelect = (selectedValue: string) => {
+    const newValue = value.includes(selectedValue)
+      ? value.filter((v) => v !== selectedValue)
+      : [...value, selectedValue]
+    onValueChange?.(newValue)
+  }
+
+  const handleRemove = (valueToRemove: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const newValue = value.filter((v) => v !== valueToRemove)
+    onValueChange?.(newValue)
   }
 
   return (
@@ -70,14 +84,40 @@ export function Combobox({
           aria-expanded={open}
           disabled={disabled}
           className={cn(
-            'w-full justify-between font-normal',
-            !value && 'text-muted-foreground',
+            'w-full justify-between font-normal h-auto min-h-10',
+            !value.length && 'text-muted-foreground',
             className
           )}
         >
-          <span className="truncate">
-            {selectedOption?.label || placeholder}
-          </span>
+          <div className="flex flex-wrap gap-1 flex-1">
+            {selectedOptions.length === 0 ? (
+              <span>{placeholder}</span>
+            ) : selectedOptions.length <= maxDisplay ? (
+              selectedOptions.map((option) => (
+                <Badge key={option.value} variant="secondary" className="gap-1">
+                  {option.label}
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => handleRemove(option.value, e)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        handleRemove(option.value, e)
+                      }
+                    }}
+                    className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer"
+                  >
+                    <X className="h-3 w-3" />
+                  </span>
+                </Badge>
+              ))
+            ) : (
+              <Badge variant="secondary">
+                {selectedOptions.length} selected
+              </Badge>
+            )}
+          </div>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -88,13 +128,11 @@ export function Combobox({
             value={searchValue}
             onValueChange={handleSearchChange}
           />
-          <CommandList className="max-h-[300px] overflow-y-auto">
+          <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
               {options
                 .filter((option) => {
-                  // Skip client-side filtering if server-side search is enabled
-                  if (serverSideSearch) return true
                   if (!searchValue) return true
                   const searchLower = searchValue.toLowerCase()
                   const labelMatch = option.label.toLowerCase().includes(searchLower)
@@ -105,16 +143,12 @@ export function Combobox({
                   <CommandItem
                     key={option.value}
                     value={option.value}
-                    onSelect={() => {
-                      onValueChange?.(option.value)
-                      setOpen(false)
-                      setSearchValue('')
-                    }}
+                    onSelect={() => handleSelect(option.value)}
                   >
                     <Check
                       className={cn(
                         'mr-2 h-4 w-4',
-                        value === option.value ? 'opacity-100' : 'opacity-0'
+                        value.includes(option.value) ? 'opacity-100' : 'opacity-0'
                       )}
                     />
                     <div className="flex flex-col">

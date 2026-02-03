@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Combobox } from '@/components/ui/combobox'
+import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox'
 import { useClients, useCities, useTruckTypes, useDemandCategories } from '@/hooks/use-repositories'
 import { useCreateDemandForecast, useUpdateDemandForecast, usePlanningWeeks } from '@/hooks/use-demand'
 import { useOrganizationSettings } from '@/hooks/use-organization'
@@ -105,7 +106,7 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
       pickupCityId: '',
       dropoffCityId: '',
       demandCategoryId: '',
-      truckTypeId: '',
+      truckTypeIds: [],
       day1Loads: 0,
       day2Loads: 0,
       day3Loads: 0,
@@ -186,7 +187,7 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
           pickupCityId: forecast.pickupLocationId,
           dropoffCityId: forecast.dropoffLocationId,
           demandCategoryId: forecast.demandCategoryId || '',
-          truckTypeId: forecast.resourceTypeId,
+          truckTypeIds: [forecast.resourceTypeId],
           day1Loads: forecast.day1Qty,
           day2Loads: forecast.day2Qty,
           day3Loads: forecast.day3Qty,
@@ -206,7 +207,7 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
           pickupCityId: '',
           dropoffCityId: '',
           demandCategoryId: '',
-          truckTypeId: '',
+          truckTypeIds: [],
           day1Loads: 0,
           day2Loads: 0,
           day3Loads: 0,
@@ -226,13 +227,14 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
   const onSubmit = async (data: CreateDemandForecastInput) => {
     try {
       if (isEditMode && forecast) {
+        // When editing, update the single forecast with the first truck type
         await updateMutation.mutateAsync({
           id: forecast.id,
           clientId: data.clientId,
           pickupCityId: data.pickupCityId,
           dropoffCityId: data.dropoffCityId,
           demandCategoryId: data.demandCategoryId,
-          truckTypeId: data.truckTypeId,
+          truckTypeId: data.truckTypeIds[0], // Use first truck type for updates
           day1Loads: data.day1Loads,
           day2Loads: data.day2Loads,
           day3Loads: data.day3Loads,
@@ -243,8 +245,16 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
         })
         toast.success('Demand forecast updated successfully')
       } else {
-        await createMutation.mutateAsync(data)
-        toast.success('Demand forecast created successfully')
+        // When creating, create one forecast per truck type
+        const promises = data.truckTypeIds.map((truckTypeId) =>
+          createMutation.mutateAsync({
+            ...data,
+            truckTypeIds: [truckTypeId], // Backend still expects this field
+          })
+        )
+        await Promise.all(promises)
+        const count = data.truckTypeIds.length
+        toast.success(`${count} demand forecast${count > 1 ? 's' : ''} created successfully`)
       }
       form.reset()
       onOpenChange(false)
@@ -412,12 +422,12 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
 
             <FormField
               control={form.control}
-              name="truckTypeId"
+              name="truckTypeIds"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Truck Type *</FormLabel>
                   <FormControl>
-                    <Combobox
+                    <MultiSelectCombobox
                       options={truckTypeOptions}
                       value={field.value}
                       onValueChange={field.onChange}
@@ -554,8 +564,9 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
         onOpenChange={setIsTruckTypeDialogOpen}
         initialName={truckTypeSearchQuery}
         onSuccess={(truckType) => {
-          form.setValue('truckTypeId', truckType.id)
-          toast.success(`Truck type "${truckType.name}" selected`)
+          const currentTypes = form.getValues('truckTypeIds')
+          form.setValue('truckTypeIds', [...currentTypes, truckType.id])
+          toast.success(`Truck type "${truckType.name}" added`)
         }}
       />
 

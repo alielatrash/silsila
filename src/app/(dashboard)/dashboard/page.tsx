@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { BarChart3, ClipboardList, Package, Truck, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 interface DashboardData {
   currentWeek: {
@@ -225,22 +226,39 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-foreground">No gaps - all routes covered</p>
             ) : (
               <div className="space-y-3">
-                {data?.topGapRoutes.map((route) => (
-                  <div
-                    key={route.routeKey}
-                    className="flex items-center justify-between p-3 bg-muted rounded-lg"
-                  >
-                    <div>
-                      <p className="font-medium">{route.routeKey}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Target: {route.target} | Committed: {route.committed}
-                      </p>
+                {data?.topGapRoutes.map((route) => {
+                  const gapPercent = route.target > 0 ? Math.round((route.gap / route.target) * 100) : 0
+                  const isFilled = gapPercent <= 0
+
+                  return (
+                    <div
+                      key={route.routeKey}
+                      className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium">{route.routeKey}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Target: {route.target} | Committed: {route.committed}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          "inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap min-w-[130px]",
+                          isFilled && "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400",
+                          !isFilled && "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400"
+                        )}>
+                          {isFilled ? "CAPACITY FILLED" : "FILL RISK"}
+                        </span>
+                        <span className={cn(
+                          "inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap min-w-[80px]",
+                          isFilled ? "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400" : "bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-400"
+                        )}>
+                          {isFilled ? (route.gap < 0 ? `+${Math.abs(route.gap)}` : route.gap) : route.gap} ({gapPercent > 0 ? '+' : ''}{gapPercent}%)
+                        </span>
+                      </div>
                     </div>
-                    <Badge className={route.gap > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}>
-                      {route.gap > 0 ? `Gap: ${route.gap}` : 'Covered'}
-                    </Badge>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </CardContent>

@@ -24,6 +24,8 @@ model User {
   role                UserRole
   currentOrgId        String? // Current organization context
   onboardingCompleted Boolean   @default(false) // Track if user completed onboarding
+  emailVerified       Boolean   @default(false) // Track if email is verified via OTP
+  emailVerifiedAt     DateTime? // When email was verified
   isActive            Boolean   @default(true)
   lastActivityAt      DateTime? // Last time user was active (for admin tracking)
   createdAt           DateTime  @default(now())

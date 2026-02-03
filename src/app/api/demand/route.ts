@@ -185,6 +185,9 @@ export async function POST(request: Request) {
 
     const data = validationResult.data
 
+    // Extract first truck type ID (frontend sends array with single ID per request)
+    const truckTypeId = data.truckTypeIds[0]
+
     // Check organization settings for demand category configuration
     const settings = await prisma.organizationSettings.findUnique({
       where: { organizationId: session.user.currentOrgId },
@@ -210,7 +213,7 @@ export async function POST(request: Request) {
           partyId: data.clientId,
           pickupLocationId: data.pickupCityId,
           dropoffLocationId: data.dropoffCityId,
-          resourceTypeId: data.truckTypeId,
+          resourceTypeId: truckTypeId,
         }),
       }),
     ])
@@ -259,7 +262,7 @@ export async function POST(request: Request) {
         pickupLocationId: data.pickupCityId,
         dropoffLocationId: data.dropoffCityId,
         demandCategoryId: data.demandCategoryId || null,
-        resourceTypeId: data.truckTypeId,
+        resourceTypeId: truckTypeId,
         day1Qty: data.day1Loads || 0,
         day2Qty: data.day2Loads || 0,
         day3Qty: data.day3Loads || 0,

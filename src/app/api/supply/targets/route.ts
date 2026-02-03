@@ -158,14 +158,14 @@ export async function GET(request: Request) {
         commitments: routeCommitments.map((c) => ({
           id: c.id,
           party: c.party,
-          day1: c.day1Committed,
-          day2: c.day2Committed,
-          day3: c.day3Committed,
-          day4: c.day4Committed,
-          day5: c.day5Committed,
-          day6: c.day6Committed,
-          day7: c.day7Committed,
-          total: c.totalCommitted,
+          day1Committed: c.day1Committed,
+          day2Committed: c.day2Committed,
+          day3Committed: c.day3Committed,
+          day4Committed: c.day4Committed,
+          day5Committed: c.day5Committed,
+          day6Committed: c.day6Committed,
+          day7Committed: c.day7Committed,
+          totalCommitted: c.totalCommitted,
         })),
       }
     })

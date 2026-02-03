@@ -314,8 +314,26 @@ interface DispatchSupplier {
   totals: { day1: number; day2: number; day3: number; day4: number; day5: number; day6: number; day7: number; total: number }
 }
 
+interface DispatchCustomerRoute {
+  routeKey: string
+  demand: { day1: number; day2: number; day3: number; day4: number; day5: number; day6: number; day7: number; total: number }
+  suppliers: Array<{
+    supplierId: string
+    supplierName: string
+    plan: { day1: number; day2: number; day3: number; day4: number; day5: number; day6: number; day7: number; total: number }
+  }>
+}
+
+interface DispatchCustomer {
+  customerId: string
+  customerName: string
+  routes: DispatchCustomerRoute[]
+  totals: { day1: number; day2: number; day3: number; day4: number; day5: number; day6: number; day7: number; total: number }
+}
+
 interface DispatchData {
   suppliers: DispatchSupplier[]
+  customers: DispatchCustomer[]
   grandTotals: { day1: number; day2: number; day3: number; day4: number; day5: number; day6: number; day7: number; total: number }
 }
 
@@ -333,4 +351,4 @@ export function useDispatchSheet(planningWeekId?: string) {
   })
 }
 
-export type { DispatchSupplier, DispatchRoute, DispatchData }
+export type { DispatchSupplier, DispatchRoute, DispatchCustomer, DispatchCustomerRoute, DispatchData }

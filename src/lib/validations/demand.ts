@@ -6,7 +6,7 @@ export const createDemandForecastSchema = z.object({
   pickupCityId: z.string().min(1, 'Pickup city is required'),
   dropoffCityId: z.string().min(1, 'Dropoff city is required'),
   demandCategoryId: z.string().optional(),
-  truckTypeId: z.string().min(1, 'Truck type is required'),
+  truckTypeIds: z.array(z.string()).min(1, 'At least one truck type is required'),
   // Daily loads (for weekly planning)
   day1Loads: z.number().min(0).optional(),
   day2Loads: z.number().min(0).optional(),

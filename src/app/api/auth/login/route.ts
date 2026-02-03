@@ -76,6 +76,22 @@ export async function POST(request: Request) {
       )
     }
 
+    // Check if email is verified
+    if (!user.emailVerified) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'EMAIL_NOT_VERIFIED',
+            message: 'Please verify your email before logging in',
+            requiresVerification: true,
+            userId: user.id,
+          },
+        },
+        { status: 403 }
+      )
+    }
+
     // Check if user has organization memberships
     const memberships = await prisma.organizationMember.findMany({
       where: { userId: user.id },

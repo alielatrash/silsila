@@ -43,6 +43,26 @@ export const registerSchema = z.object({
       message: 'Please select a valid week start day',
     })
     .optional(),
+  organizationSettings: z
+    .object({
+      locationLabel: z.string(),
+      locationLabelPlural: z.string(),
+      partyLabel: z.string(),
+      partyLabelPlural: z.string(),
+      resourceTypeLabel: z.string(),
+      resourceTypeLabelPlural: z.string(),
+      demandLabel: z.string(),
+      demandLabelPlural: z.string(),
+      supplyLabel: z.string(),
+      supplyLabelPlural: z.string(),
+      demandCategoryLabel: z.string(),
+      demandCategoryLabelPlural: z.string(),
+      demandCategoryEnabled: z.boolean(),
+      demandCategoryRequired: z.boolean(),
+      planningCycle: z.string(),
+      weekStartDay: z.string(),
+    })
+    .optional(),
 })
 
 export const loginSchema = z.object({

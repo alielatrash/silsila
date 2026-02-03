@@ -41,6 +41,12 @@ export function RegisterForm() {
   const [formData, setFormData] = useState<RegisterInput | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [selectedRole, setSelectedRole] = useState<'DEMAND_PLANNER' | 'SUPPLY_PLANNER' | 'ADMIN'>('DEMAND_PLANNER')
+  const [requiresVerification, setRequiresVerification] = useState(false)
+  const [userId, setUserId] = useState('')
+  const [userEmail, setUserEmail] = useState('')
+  const [otpCode, setOtpCode] = useState('')
+  const [isVerifying, setIsVerifying] = useState(false)
+  const [isResending, setIsResending] = useState(false)
 
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -90,6 +96,16 @@ export function RegisterForm() {
         return
       }
 
+      // Check if email verification is required
+      if (result.data.requiresVerification) {
+        setRequiresVerification(true)
+        setUserId(result.data.userId)
+        setUserEmail(data.email)
+        toast.success('Verification code sent to your email')
+        setIsLoading(false)
+        return
+      }
+
       toast.success('Account created successfully')
       router.push('/')
       router.refresh()
@@ -122,6 +138,17 @@ export function RegisterForm() {
         return
       }
 
+      // Check if email verification is required
+      if (result.data.requiresVerification) {
+        setRequiresVerification(true)
+        setUserId(result.data.userId)
+        setUserEmail(formData.email)
+        setNeedsOrgCreation(false)
+        toast.success('Verification code sent to your email')
+        setIsLoading(false)
+        return
+      }
+
       toast.success(result.data.message)
       router.push('/')
       router.refresh()
@@ -151,6 +178,17 @@ export function RegisterForm() {
         return
       }
 
+      // Check if email verification is required
+      if (result.data.requiresVerification) {
+        setRequiresVerification(true)
+        setUserId(result.data.userId)
+        setUserEmail(formData.email)
+        setNeedsRoleSelection(false)
+        toast.success('Verification code sent to your email')
+        setIsLoading(false)
+        return
+      }
+
       toast.success(result.data.message)
       router.push('/')
       router.refresh()
@@ -159,6 +197,114 @@ export function RegisterForm() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleVerifyOTP = async () => {
+    if (!otpCode.trim() || otpCode.length !== 6) {
+      toast.error('Please enter a valid 6-digit code')
+      return
+    }
+
+    setIsVerifying(true)
+    try {
+      const response = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, code: otpCode }),
+        credentials: 'include',
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        toast.error(result.error.message)
+        return
+      }
+
+      toast.success('Email verified successfully')
+      router.push('/')
+      router.refresh()
+    } catch (error) {
+      toast.error('Something went wrong. Please try again.')
+    } finally {
+      setIsVerifying(false)
+    }
+  }
+
+  const handleResendOTP = async () => {
+    setIsResending(true)
+    try {
+      const response = await fetch('/api/auth/resend-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, email: userEmail }),
+        credentials: 'include',
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        toast.error(result.error.message)
+        return
+      }
+
+      toast.success('Verification code sent')
+      setOtpCode('')
+    } catch (error) {
+      toast.error('Something went wrong. Please try again.')
+    } finally {
+      setIsResending(false)
+    }
+  }
+
+  // Show OTP verification screen
+  if (requiresVerification) {
+    console.log('Rendering OTP verification screen for:', userEmail)
+    return (
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">Verify Your Email</CardTitle>
+          <CardDescription>
+            We sent a 6-digit verification code to <strong>{userEmail}</strong>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Verification Code</Label>
+              <Input
+                type="text"
+                placeholder="000000"
+                value={otpCode}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 6)
+                  setOtpCode(value)
+                }}
+                maxLength={6}
+                className="text-center text-2xl tracking-widest font-semibold"
+                autoComplete="one-time-code"
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter the 6-digit code from your email
+              </p>
+            </div>
+            <Button onClick={handleVerifyOTP} className="w-full" disabled={isVerifying || otpCode.length !== 6}>
+              {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Verify Email
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleResendOTP}
+              className="w-full"
+              disabled={isResending}
+            >
+              {isResending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Resend Code
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   // Show role selection for joining existing org
@@ -205,7 +351,19 @@ export function RegisterForm() {
 
   // Show onboarding wizard for new organizations
   if (needsOrgCreation && formData) {
-    return <OnboardingWizard initialData={formData} />
+    return (
+      <OnboardingWizard
+        initialData={formData}
+        onVerificationRequired={(userId, email) => {
+          console.log('onVerificationRequired callback triggered:', { userId, email })
+          setRequiresVerification(true)
+          setUserId(userId)
+          setUserEmail(email)
+          setNeedsOrgCreation(false)
+          console.log('State updated, should show OTP screen now')
+        }}
+      />
+    )
   }
 
   return (

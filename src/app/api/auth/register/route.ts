@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/password'
-import { createSession, setSessionCookie } from '@/lib/auth'
 import { createAuditLog, AuditAction } from '@/lib/audit'
 import { registerSchema } from '@/lib/validations/auth'
+import { createOTP } from '@/lib/otp'
+import { sendOTPEmail } from '@/lib/email'
 import {
   extractDomain,
   isPublicDomain,
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { email, password, firstName, lastName, mobileNumber, role, organizationName, planningCycle, weekStartDay } =
+    const { email, password, firstName, lastName, mobileNumber, role, organizationName, planningCycle, weekStartDay, organizationSettings } =
       validationResult.data
     const normalizedEmail = email.toLowerCase()
 
@@ -128,9 +129,12 @@ export async function POST(request: Request) {
         },
       })
 
-      // Create organization settings with default trucking terminology
+      // Create organization settings
       await prisma.organizationSettings.create({
-        data: {
+        data: organizationSettings ? {
+          organizationId: org.id,
+          ...organizationSettings,
+        } : {
           organizationId: org.id,
           locationLabel: 'City',
           locationLabelPlural: 'Cities',
@@ -142,6 +146,10 @@ export async function POST(request: Request) {
           demandLabelPlural: 'Demand Forecasts',
           supplyLabel: 'Supply',
           supplyLabelPlural: 'Supply Commitments',
+          demandCategoryLabel: 'Category',
+          demandCategoryLabelPlural: 'Categories',
+          demandCategoryEnabled: false,
+          demandCategoryRequired: false,
           planningCycle: planningCycle || 'DAILY',
           weekStartDay: weekStartDay || 'SUNDAY',
         },
@@ -161,6 +169,7 @@ export async function POST(request: Request) {
           mobileNumber,
           role: 'ADMIN', // New org creators are always admins
           currentOrgId: org.id,
+          emailVerified: false, // Require email verification
         },
       })
 
@@ -174,10 +183,24 @@ export async function POST(request: Request) {
         },
       })
 
-      // Create session and set cookie
-      const userAgent = request.headers.get('user-agent') || undefined
-      const token = await createSession(user.id, userAgent)
-      await setSessionCookie(token)
+      // Generate OTP and send verification email
+      console.log('[REGISTER] Generating OTP for user:', user.id, normalizedEmail)
+      const otpCode = await createOTP(user.id, 'EMAIL_VERIFICATION')
+      console.log('[REGISTER] OTP generated successfully:', otpCode.substring(0, 2) + '****')
+
+      console.log('[REGISTER] Attempting to send OTP email to:', normalizedEmail)
+      try {
+        const emailResult = await sendOTPEmail({
+          to: normalizedEmail,
+          firstName,
+          otp: otpCode,
+          purpose: 'verification',
+        })
+        console.log('[REGISTER] OTP email sent successfully:', emailResult)
+      } catch (emailError) {
+        console.error('[REGISTER] Failed to send OTP email:', emailError)
+        // Don't throw - allow registration to continue even if email fails
+      }
 
       // Audit log
       await createAuditLog({
@@ -198,7 +221,9 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         data: {
-          message: `Organization "${organizationName}" created successfully`,
+          message: `Organization "${organizationName}" created successfully. Please verify your email to continue.`,
+          requiresVerification: true,
+          userId: user.id,
           user: {
             id: user.id,
             email: user.email,
@@ -303,9 +328,12 @@ export async function POST(request: Request) {
         },
       })
 
-      // Create organization settings with default trucking terminology
+      // Create organization settings
       await prisma.organizationSettings.create({
-        data: {
+        data: organizationSettings ? {
+          organizationId: org.id,
+          ...organizationSettings,
+        } : {
           organizationId: org.id,
           locationLabel: 'City',
           locationLabelPlural: 'Cities',
@@ -317,6 +345,10 @@ export async function POST(request: Request) {
           demandLabelPlural: 'Demand Forecasts',
           supplyLabel: 'Supply',
           supplyLabelPlural: 'Supply Commitments',
+          demandCategoryLabel: 'Category',
+          demandCategoryLabelPlural: 'Categories',
+          demandCategoryEnabled: false,
+          demandCategoryRequired: false,
           planningCycle: planningCycle || 'DAILY',
           weekStartDay: weekStartDay || 'SUNDAY',
         },
@@ -353,6 +385,7 @@ export async function POST(request: Request) {
         mobileNumber,
         role: userRole,
         currentOrgId: organizationId,
+        emailVerified: false, // Require email verification
       },
     })
 
@@ -366,10 +399,24 @@ export async function POST(request: Request) {
       },
     })
 
-    // Create session and set cookie
-    const userAgent = request.headers.get('user-agent') || undefined
-    const token = await createSession(user.id, userAgent)
-    await setSessionCookie(token)
+    // Generate OTP and send verification email
+    console.log('[REGISTER] Generating OTP for user:', user.id, normalizedEmail)
+    const otpCode = await createOTP(user.id, 'EMAIL_VERIFICATION')
+    console.log('[REGISTER] OTP generated successfully:', otpCode.substring(0, 2) + '****')
+
+    console.log('[REGISTER] Attempting to send OTP email to:', normalizedEmail)
+    try {
+      const emailResult = await sendOTPEmail({
+        to: normalizedEmail,
+        firstName,
+        otp: otpCode,
+        purpose: 'verification',
+      })
+      console.log('[REGISTER] OTP email sent successfully:', emailResult)
+    } catch (emailError) {
+      console.error('[REGISTER] Failed to send OTP email:', emailError)
+      // Don't throw - allow registration to continue even if email fails
+    }
 
     // Audit log
     await createAuditLog({
@@ -391,8 +438,10 @@ export async function POST(request: Request) {
       data: {
         message:
           orgRole === 'OWNER'
-            ? `Organization "${orgName}" created successfully`
-            : `Joined ${orgName} successfully`,
+            ? `Organization "${orgName}" created successfully. Please verify your email to continue.`
+            : `Joined ${orgName} successfully. Please verify your email to continue.`,
+        requiresVerification: true,
+        userId: user.id,
         user: {
           id: user.id,
           email: user.email,

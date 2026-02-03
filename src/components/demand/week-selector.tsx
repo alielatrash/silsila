@@ -1,7 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { CalendarDays } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
@@ -10,15 +16,21 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { usePlanningWeeks } from '@/hooks/use-demand'
+import { cn } from '@/lib/utils'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths } from 'date-fns'
 
 interface WeekSelectorProps {
   value: string | undefined
   onValueChange: (value: string) => void
 }
 
+const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+
 export function WeekSelector({ value, onValueChange }: WeekSelectorProps) {
   const { data, isLoading } = usePlanningWeeks()
   const [mounted, setMounted] = useState(false)
+  const [open, setOpen] = useState(false)
+  const [currentMonth, setCurrentMonth] = useState(new Date())
 
   useEffect(() => {
     setMounted(true)
@@ -27,7 +39,86 @@ export function WeekSelector({ value, onValueChange }: WeekSelectorProps) {
   const planningCycle = data?.meta?.planningCycle || 'WEEKLY'
   const isMonthly = planningCycle === 'MONTHLY'
   const periodLabel = isMonthly ? 'month' : 'week'
-  const periodLabelCapitalized = isMonthly ? 'Month' : 'Week'
+
+  // Get all week start dates from existing planning weeks
+  const existingWeekStartDates = useMemo(() => {
+    if (!data?.data) return new Set<string>()
+    return new Set(data.data.map(week => {
+      const date = new Date(week.weekStart)
+      return format(date, 'yyyy-MM-dd')
+    }))
+  }, [data])
+
+  // Check if a date is a week start day (Sunday = 0)
+  const isWeekStartDay = (date: Date) => {
+    return date.getDay() === 0
+  }
+
+  // Get selected week info
+  const selectedWeek = useMemo(() => {
+    if (!value || !data?.data) return null
+    return data.data.find(week => week.id === value)
+  }, [value, data])
+
+  // Get selected date (either from selectedWeek or from value if it's a date string)
+  const selectedDate = useMemo(() => {
+    if (selectedWeek) {
+      return new Date(selectedWeek.weekStart)
+    } else if (value && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // value is a date string in ISO format
+      return new Date(value)
+    }
+    return null
+  }, [selectedWeek, value])
+
+  // Generate calendar days
+  const calendarDays = useMemo(() => {
+    const start = startOfMonth(currentMonth)
+    const end = endOfMonth(currentMonth)
+    const days = eachDayOfInterval({ start, end })
+
+    // Add padding days for start of month
+    const startDay = start.getDay()
+    const paddingStart = Array(startDay).fill(null)
+
+    // Add padding days for end of month
+    const endDay = end.getDay()
+    const paddingEnd = Array(6 - endDay).fill(null)
+
+    return [...paddingStart, ...days, ...paddingEnd]
+  }, [currentMonth])
+
+  // Find week ID for a given date
+  const getWeekIdForDate = (date: Date) => {
+    if (!data?.data) return null
+    const dateStr = format(date, 'yyyy-MM-dd')
+    const week = data.data.find(week => {
+      const weekStartDate = format(new Date(week.weekStart), 'yyyy-MM-dd')
+      return weekStartDate === dateStr
+    })
+    return week?.id
+  }
+
+  const handleDateClick = (date: Date) => {
+    const weekId = getWeekIdForDate(date)
+    if (weekId) {
+      // Existing planning week found, use its ID
+      onValueChange(weekId)
+    } else {
+      // No planning week exists, pass the date in ISO format
+      // Parent component will handle creating the planning week
+      onValueChange(format(date, 'yyyy-MM-dd'))
+    }
+    setOpen(false)
+  }
+
+  const handlePreviousMonth = () => {
+    setCurrentMonth(prev => subMonths(prev, 1))
+  }
+
+  const handleNextMonth = () => {
+    setCurrentMonth(prev => addMonths(prev, 1))
+  }
 
   if (!mounted) {
     return (
@@ -39,18 +130,138 @@ export function WeekSelector({ value, onValueChange }: WeekSelectorProps) {
   }
 
   return (
-    <Select value={value} onValueChange={onValueChange} disabled={isLoading}>
-      <SelectTrigger className="w-[280px]">
-        <CalendarDays className="mr-2 h-4 w-4" />
-        <SelectValue placeholder={isLoading ? 'Loading...' : `Select planning ${periodLabel}`} />
-      </SelectTrigger>
-      <SelectContent>
-        {data?.data?.map((week) => (
-          <SelectItem key={week.id} value={week.id}>
-            {isMonthly ? week.display : `${periodLabelCapitalized} ${week.weekNumber} - ${week.display}`}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn(
+            "w-[280px] justify-start text-left font-normal",
+            !value && "text-muted-foreground"
+          )}
+        >
+          <CalendarDays className="mr-2 h-4 w-4" />
+          {selectedWeek
+            ? isMonthly
+              ? selectedWeek.display
+              : `Week ${selectedWeek.weekNumber} - ${selectedWeek.display}`
+            : selectedDate
+            ? `Week of ${format(selectedDate, 'MMM d, yyyy')}`
+            : `Select planning ${periodLabel}`
+          }
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <div className="p-3">
+          {/* Month/Year Navigation */}
+          <div className="flex items-center justify-between mb-4">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={handlePreviousMonth}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            <div className="flex gap-2">
+              <Select
+                value={format(currentMonth, 'M')}
+                onValueChange={(month) => {
+                  setCurrentMonth(new Date(currentMonth.getFullYear(), parseInt(month) - 1, 1))
+                }}
+              >
+                <SelectTrigger className="w-[110px] h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <SelectItem key={i + 1} value={(i + 1).toString()}>
+                      {format(new Date(2000, i, 1), 'MMMM')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={currentMonth.getFullYear().toString()}
+                onValueChange={(year) => {
+                  setCurrentMonth(new Date(parseInt(year), currentMonth.getMonth(), 1))
+                }}
+              >
+                <SelectTrigger className="w-[90px] h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 10 }, (_, i) => {
+                    const year = new Date().getFullYear() - 2 + i
+                    return (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={handleNextMonth}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="grid grid-cols-7 gap-1">
+            {/* Weekday headers */}
+            {WEEKDAYS.map((day, index) => (
+              <div
+                key={index}
+                className="h-9 w-9 flex items-center justify-center text-sm font-medium text-muted-foreground"
+              >
+                {day}
+              </div>
+            ))}
+
+            {/* Calendar days */}
+            {calendarDays.map((day, index) => {
+              if (!day) {
+                return <div key={`empty-${index}`} className="h-9 w-9" />
+              }
+
+              const dateStr = format(day, 'yyyy-MM-dd')
+              const isWeekStart = isWeekStartDay(day)
+              const hasExistingWeek = existingWeekStartDates.has(dateStr)
+              const isSelected = selectedDate && isSameDay(day, selectedDate)
+
+              return (
+                <button
+                  key={dateStr}
+                  onClick={() => isWeekStart && handleDateClick(day)}
+                  disabled={!isWeekStart}
+                  className={cn(
+                    "h-9 w-9 flex items-center justify-center text-sm transition-colors relative",
+                    !isWeekStart && "text-muted-foreground cursor-default"
+                  )}
+                >
+                  <span className={cn(
+                    "flex items-center justify-center h-8 w-8 rounded-full font-medium transition-colors",
+                    isWeekStart && !isSelected && hasExistingWeek && "bg-primary/10 text-primary cursor-pointer hover:bg-primary/20",
+                    isWeekStart && !isSelected && !hasExistingWeek && "bg-primary/5 text-primary cursor-pointer hover:bg-primary/15 border border-primary/20",
+                    isSelected && "bg-primary text-primary-foreground",
+                    !isWeekStart && "bg-transparent"
+                  )}>
+                    {format(day, 'd')}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }
