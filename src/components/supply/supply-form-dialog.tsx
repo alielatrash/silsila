@@ -220,210 +220,109 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
               )}
             />
 
-            {/* Gap Summary */}
+            {/* Simple Summary */}
             {targetData && (
-              <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
-                <h4 className="text-sm font-semibold mb-2">Target vs Current Supply</h4>
-                <div className={`grid gap-1 text-xs ${isMonthlyPlanning ? 'grid-cols-5' : 'grid-cols-8'}`}>
-                  <div className="font-medium"></div>
-                  {isMonthlyPlanning ? (
-                    <>
-                      {MONTH_WEEKS.map((week, index) => (
-                        <div key={week.key} className="font-medium text-center">{week.label}</div>
-                      ))}
-                    </>
-                  ) : (
-                    <>
-                      {WEEK_DAYS.map((day) => (
-                        <div key={day.key} className="font-medium text-center">{day.label}</div>
-                      ))}
-                    </>
-                  )}
+              <div className="rounded-lg border bg-muted/50 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold">Supply Needed</h4>
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Total Gap: </span>
+                    <span className={`font-bold ${targetData.gap.total > 0 ? 'text-red-600' : targetData.gap.total < 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                      {targetData.gap.total > 0 ? `${targetData.gap.total} needed` : targetData.gap.total < 0 ? `${Math.abs(targetData.gap.total)} excess` : 'Fulfilled'}
+                    </span>
+                  </div>
                 </div>
-                <div className={`grid gap-1 text-xs ${isMonthlyPlanning ? 'grid-cols-5' : 'grid-cols-8'}`}>
-                  <div className="text-muted-foreground">Target:</div>
-                  {isMonthlyPlanning ? (
-                    <>
-                      {MONTH_WEEKS.map((week, index) => (
-                        <div key={week.key} className="text-center font-medium text-blue-600">
-                          {targetData.target[`week${index + 1}` as keyof typeof targetData.target] || 0}
-                        </div>
-                      ))}
-                    </>
-                  ) : (
-                    <>
-                      {WEEK_DAYS.map((day, index) => (
-                        <div key={day.key} className="text-center font-medium text-blue-600">
-                          {targetData.target[`day${index + 1}` as keyof typeof targetData.target] || 0}
-                        </div>
-                      ))}
-                    </>
-                  )}
+                <div className="text-xs text-muted-foreground">
+                  Enter commitment quantities below. Red badges show current gaps.
                 </div>
-                <div className={`grid gap-1 text-xs ${isMonthlyPlanning ? 'grid-cols-5' : 'grid-cols-8'}`}>
-                  <div className="text-muted-foreground">Committed:</div>
-                  {isMonthlyPlanning ? (
-                    <>
-                      {MONTH_WEEKS.map((week, index) => (
-                        <div key={week.key} className="text-center text-green-600">
-                          {targetData.committed[`week${index + 1}` as keyof typeof targetData.committed] || 0}
-                        </div>
-                      ))}
-                    </>
-                  ) : (
-                    <>
-                      {WEEK_DAYS.map((day, index) => (
-                        <div key={day.key} className="text-center text-green-600">
-                          {targetData.committed[`day${index + 1}` as keyof typeof targetData.committed] || 0}
-                        </div>
-                      ))}
-                    </>
-                  )}
-                </div>
-                <div className={`grid gap-1 text-xs ${isMonthlyPlanning ? 'grid-cols-5' : 'grid-cols-8'}`}>
-                  <div className="text-muted-foreground">Current Gap:</div>
-                  {isMonthlyPlanning ? (
-                    <>
-                      {MONTH_WEEKS.map((week, index) => {
-                        const gap = targetData.gap[`week${index + 1}` as keyof typeof targetData.gap] || 0
-                        return (
-                          <div key={week.key} className={`text-center font-medium ${gap > 0 ? 'text-red-600' : gap < 0 ? 'text-amber-600' : 'text-gray-600'}`}>
-                            {gap}
-                          </div>
-                        )
-                      })}
-                    </>
-                  ) : (
-                    <>
-                      {WEEK_DAYS.map((day, index) => {
-                        const gap = targetData.gap[`day${index + 1}` as keyof typeof targetData.gap] || 0
-                        return (
-                          <div key={day.key} className={`text-center font-medium ${gap > 0 ? 'text-red-600' : gap < 0 ? 'text-amber-600' : 'text-gray-600'}`}>
-                            {gap}
-                          </div>
-                        )
-                      })}
-                    </>
-                  )}
-                </div>
-                {resultingGap && (
-                  <>
-                    <div className="border-t pt-2"></div>
-                    <div className={`grid gap-1 text-xs ${isMonthlyPlanning ? 'grid-cols-5' : 'grid-cols-8'}`}>
-                      <div className="text-muted-foreground">New Commit:</div>
-                      {isMonthlyPlanning ? (
-                        <>
-                          {MONTH_WEEKS.map((week, index) => {
-                            const value = formValues[`week${index + 1}Committed` as keyof typeof formValues] as number || 0
-                            return (
-                              <div key={week.key} className={`text-center font-medium ${value > 0 ? 'text-green-700' : 'text-gray-400'}`}>
-                                {value > 0 ? `+${value}` : '—'}
-                              </div>
-                            )
-                          })}
-                        </>
-                      ) : (
-                        <>
-                          {WEEK_DAYS.map((day, index) => {
-                            const value = formValues[`day${index + 1}Committed` as keyof typeof formValues] as number || 0
-                            return (
-                              <div key={day.key} className={`text-center font-medium ${value > 0 ? 'text-green-700' : 'text-gray-400'}`}>
-                                {value > 0 ? `+${value}` : '—'}
-                              </div>
-                            )
-                          })}
-                        </>
-                      )}
-                    </div>
-                    <div className={`grid gap-1 text-xs ${isMonthlyPlanning ? 'grid-cols-5' : 'grid-cols-8'}`}>
-                      <div className="text-muted-foreground font-semibold">Result Gap:</div>
-                      {isMonthlyPlanning ? (
-                        <>
-                          {MONTH_WEEKS.map((week, index) => {
-                            const gap = resultingGap[`week${index + 1}` as keyof typeof resultingGap] || 0
-                            return (
-                              <div key={week.key} className={`text-center font-bold ${gap > 0 ? 'text-red-600' : gap < 0 ? 'text-amber-600' : 'text-green-600'}`}>
-                                {gap}
-                              </div>
-                            )
-                          })}
-                        </>
-                      ) : (
-                        <>
-                          {WEEK_DAYS.map((day, index) => {
-                            const gap = resultingGap[`day${index + 1}` as keyof typeof resultingGap] || 0
-                            return (
-                              <div key={day.key} className={`text-center font-bold ${gap > 0 ? 'text-red-600' : gap < 0 ? 'text-amber-600' : 'text-green-600'}`}>
-                                {gap}
-                              </div>
-                            )
-                          })}
-                        </>
-                      )}
-                    </div>
-                  </>
-                )}
               </div>
             )}
 
             <div>
-              <FormLabel>{isMonthlyPlanning ? 'Weekly Committed Supply (Week 1-4)' : 'Daily Committed Supply (Sun-Sat)'}</FormLabel>
+              <FormLabel>{isMonthlyPlanning ? 'Supply Commitment (Weeks 1-4)' : 'Supply Commitment (Sun-Sat)'}</FormLabel>
               {isMonthlyPlanning ? (
-                <div className="grid grid-cols-5 gap-2 mt-2">
-                  <div></div>
-                  {MONTH_WEEKS.map((week, index) => (
-                    <FormField
-                      key={week.key}
-                      control={form.control}
-                      name={`week${index + 1}Committed` as any}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs text-muted-foreground">
-                            {week.label}
-                            {weekDateRanges[index] && (
-                              <div className="text-[10px]">
-                                days {weekDateRanges[index].start}-{weekDateRanges[index].end}
+                <div className="grid grid-cols-4 gap-3 mt-2">
+                  {MONTH_WEEKS.map((week, index) => {
+                    const gap = targetData?.gap[`week${index + 1}` as keyof typeof targetData.gap] || 0
+                    const target = targetData?.target[`week${index + 1}` as keyof typeof targetData.target] || 0
+                    const committed = targetData?.committed[`week${index + 1}` as keyof typeof targetData.committed] || 0
+                    return (
+                      <FormField
+                        key={week.key}
+                        control={form.control}
+                        name={`week${index + 1}Committed` as any}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs font-medium flex items-center justify-between">
+                              <span>{week.label}</span>
+                              {gap > 0 && (
+                                <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-semibold">
+                                  need {gap}
+                                </span>
+                              )}
+                            </FormLabel>
+                            {targetData && (
+                              <div className="text-[10px] text-muted-foreground mb-1">
+                                Target: {target} • Committed: {committed}
                               </div>
                             )}
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              className="text-center"
-                              {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  ))}
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="0"
+                                placeholder="0"
+                                className="text-center h-12 text-base"
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    )
+                  })}
                 </div>
               ) : (
-                <div className="grid grid-cols-8 gap-2 mt-2">
-                  <div></div>
-                  {WEEK_DAYS.map((day, index) => (
-                    <FormField
-                      key={day.key}
-                      control={form.control}
-                      name={`day${index + 1}Committed` as keyof CreateSupplyCommitmentInput}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs text-muted-foreground">{day.label}</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="0"
-                              className="text-center"
-                              {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  ))}
+                <div className="grid grid-cols-7 gap-2 mt-2">
+                  {WEEK_DAYS.map((day, index) => {
+                    const gap = targetData?.gap[`day${index + 1}` as keyof typeof targetData.gap] || 0
+                    const target = targetData?.target[`day${index + 1}` as keyof typeof targetData.target] || 0
+                    const committed = targetData?.committed[`day${index + 1}` as keyof typeof targetData.committed] || 0
+                    return (
+                      <FormField
+                        key={day.key}
+                        control={form.control}
+                        name={`day${index + 1}Committed` as keyof CreateSupplyCommitmentInput}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs font-medium flex flex-col gap-0.5">
+                              <span>{day.label}</span>
+                              {gap > 0 && (
+                                <span className="text-[10px] bg-red-100 text-red-700 px-1 py-0.5 rounded text-center font-semibold">
+                                  -{gap}
+                                </span>
+                              )}
+                            </FormLabel>
+                            {targetData && (
+                              <div className="text-[9px] text-muted-foreground mb-1 leading-tight">
+                                {target}/{committed}
+                              </div>
+                            )}
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="0"
+                                placeholder="0"
+                                className="text-center h-10"
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    )
+                  })}
                 </div>
               )}
             </div>
