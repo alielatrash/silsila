@@ -103,7 +103,7 @@ export async function POST(request: Request) {
     // Audit log
     await createAuditLog({
       userId,
-      action: AuditAction.USER_LOGIN,
+      action: AuditAction.USER_LOGGED_IN,
       entityType: 'User',
       entityId: userId,
       metadata: {
