@@ -471,8 +471,8 @@ model ResourceType {
   updatedAt      DateTime     @updatedAt
 
   // Relations
-  demandForecasts   DemandForecast[]
-  supplyCommitments SupplyCommitment[]
+  demandForecastResourceTypes DemandForecastResourceType[]
+  supplyCommitments           SupplyCommitment[]
 
   @@unique([organizationId, name])
   @@index([organizationId])
@@ -548,8 +548,9 @@ model DemandForecast {
   // Classification
   demandCategoryId String? // Optional: Organization-defined category (e.g., Domestic/Ports, Express/Standard)
   demandCategory   DemandCategory? @relation(fields: [demandCategoryId], references: [id])
-  resourceTypeId   String
-  resourceType     ResourceType @relation(fields: [resourceTypeId], references: [id])
+
+  // Resource types (many-to-many: a forecast can be fulfilled by any of these types)
+  resourceTypes    DemandForecastResourceType[]
 
   // Daily quantity forecasts (Sunday to Saturday) - for weekly planning
   day1Qty  Int @default(0) // Sunday
@@ -575,7 +576,7 @@ model DemandForecast {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@unique([organizationId, planningWeekId, partyId, pickupLocationId, dropoffLocationId, resourceTypeId, demandCategoryId])
+  @@unique([organizationId, planningWeekId, partyId, pickupLocationId, dropoffLocationId, demandCategoryId])
   @@index([organizationId])
   @@index([routeKey])
   @@index([planningWeekId])
@@ -583,10 +584,23 @@ model DemandForecast {
   @@index([partyId])
   @@index([pickupLocationId])
   @@index([dropoffLocationId])
-  @@index([resourceTypeId])
   @@index([createdById])
   @@index([planningWeekId, partyId])
   @@index([planningWeekId, routeKey])
+}
+
+// Junction table for DemandForecast to ResourceType many-to-many relationship
+model DemandForecastResourceType {
+  id               String         @id @default(cuid())
+  demandForecastId String
+  demandForecast   DemandForecast @relation(fields: [demandForecastId], references: [id], onDelete: Cascade)
+  resourceTypeId   String
+  resourceType     ResourceType   @relation(fields: [resourceTypeId], references: [id], onDelete: Cascade)
+  createdAt        DateTime       @default(now())
+
+  @@unique([demandForecastId, resourceTypeId])
+  @@index([demandForecastId])
+  @@index([resourceTypeId])
 }
 
 model SupplyCommitment {

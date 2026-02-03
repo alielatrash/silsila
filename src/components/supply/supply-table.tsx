@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { ChevronDown, ChevronRight, Plus, Trash2, Check, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, Plus, Trash2, Check, X, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { format, addWeeks } from 'date-fns'
 import { Button } from '@/components/ui/button'
@@ -36,6 +36,7 @@ interface SupplyTarget {
   committed: { day1: number; day2: number; day3: number; day4: number; day5: number; day6: number; day7: number; week1: number; week2: number; week3: number; week4: number; total: number }
   gap: { day1: number; day2: number; day3: number; day4: number; day5: number; day6: number; day7: number; week1: number; week2: number; week3: number; week4: number; total: number }
   gapPercent: number
+  truckTypes?: Array<{ id: string; name: string }>
   clients: Array<{
     client: { id: string; name: string; code: string | null }
     day1: number
@@ -167,6 +168,20 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
     }
   }
 
+  const handleSendToSupplier = (supplierName: string) => {
+    toast.warning('🚀 Pro Feature', {
+      description: `Send supply plans directly to suppliers with Pro Plan!`,
+      duration: 4000,
+      action: {
+        label: 'Upgrade Now',
+        onClick: () => {
+          // TODO: Open contact sales modal or redirect to pricing page
+          console.log('Upgrade clicked')
+        },
+      },
+    })
+  }
+
   const getGapBadgeVariant = (gap: number): 'default' | 'secondary' | 'destructive' | 'outline' => {
     if (gap > 0) return 'destructive' // Undersupply
     if (gap < 0) return 'secondary' // Oversupply
@@ -182,6 +197,7 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
             <TableRow>
               <TableHead className="w-8"></TableHead>
               <TableHead className="w-56 font-semibold">Route</TableHead>
+              <TableHead className="w-32 font-semibold">Truck Type</TableHead>
               <TableHead className="w-24 font-semibold">Plan</TableHead>
               {isMonthlyPlanning ? (
                 MONTH_WEEKS.map((week) => (
@@ -208,7 +224,7 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
           <TableBody>
             {Array.from({ length: 5 }).map((_, i) => (
               <TableRow key={i}>
-                {Array.from({ length: 5 + columnCount }).map((_, j) => (
+                {Array.from({ length: 6 + columnCount }).map((_, j) => (
                   <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                 ))}
               </TableRow>
@@ -235,6 +251,7 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
           <TableRow>
             <TableHead className="w-8"></TableHead>
             <TableHead className="sticky left-0 bg-card w-56 font-semibold">Route</TableHead>
+            <TableHead className="w-32 font-semibold">Truck Type</TableHead>
             <TableHead className="w-20 font-semibold text-center">Status</TableHead>
             <TableHead className="w-16 font-semibold text-center">Gap</TableHead>
             <TableHead className="w-24 font-semibold">Plan</TableHead>
@@ -274,7 +291,7 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
             const isExpanded = expandedRows.has(target.routeKey)
             const baseRowIndex = targetIndex * 3
 
-            const rows: JSX.Element[] = []
+            const rows: React.ReactElement[] = []
 
             // Target Row
             rows.push(
@@ -296,11 +313,24 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
                 <TableCell className="sticky left-0 bg-white font-medium w-56 max-w-[200px] truncate">
                   {formatCitym(target.routeKey)}
                 </TableCell>
+                <TableCell className="w-32">
+                  <div className="flex flex-wrap gap-1">
+                    {target.truckTypes && target.truckTypes.length > 0 ? (
+                      target.truckTypes.map(tt => (
+                        <Badge key={tt.id} variant="secondary" className="text-xs">
+                          {tt.name}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell className="text-center">
                   <span className={cn(
                     "inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap min-w-[130px]",
-                    target.gapPercent <= 0 && "bg-green-50 text-green-700 border border-green-200",
-                    target.gapPercent > 0 && "bg-red-50 text-red-700 border border-red-200"
+                    target.gapPercent <= 0 && "bg-emerald-100 text-emerald-600",
+                    target.gapPercent > 0 && "bg-red-100 text-red-600"
                   )}>
                     {target.gapPercent <= 0 && "CAPACITY FILLED"}
                     {target.gapPercent > 0 && "FILL RISK"}
@@ -309,8 +339,8 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
                 <TableCell className="text-center">
                   <span className={cn(
                     "text-sm font-semibold",
-                    target.gapPercent > 0 && "text-red-600 dark:text-red-400",
-                    target.gapPercent < 0 && "text-emerald-700 dark:text-emerald-500",
+                    target.gapPercent > 0 && "text-red-600",
+                    target.gapPercent < 0 && "text-emerald-600",
                     target.gapPercent === 0 && "text-muted-foreground"
                   )}>
                     {target.gapPercent}%
@@ -337,6 +367,7 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
               <TableRow key={`${target.routeKey}-committed`} className="bg-transparent hover:bg-muted/30">
                 <TableCell></TableCell>
                 <TableCell className="sticky left-0 bg-white"></TableCell>
+                <TableCell></TableCell>
                 <TableCell></TableCell>
                 <TableCell></TableCell>
                 <TableCell className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Committed</TableCell>
@@ -373,6 +404,7 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
               )}>
                 <TableCell></TableCell>
                 <TableCell className="sticky left-0 bg-white"></TableCell>
+                <TableCell></TableCell>
                 <TableCell></TableCell>
                 <TableCell></TableCell>
                 <TableCell className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Gap</TableCell>
@@ -534,14 +566,25 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
                     })}
                     <TableCell className="text-center text-sm font-medium">{commitment.totalCommitted}</TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDeleteCommitment(commitment.id, commitment.party.name)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                          onClick={() => handleSendToSupplier(commitment.party.name)}
+                          title="Send to supplier"
+                        >
+                          <Send className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDeleteCommitment(commitment.id, commitment.party.name)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )

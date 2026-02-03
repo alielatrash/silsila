@@ -86,7 +86,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     const existing = await prisma.supplyCommitment.findUnique({
       where: { id },
-      include: { planningWeek: true },
+      include: {
+        planningWeek: true,
+        party: { select: { name: true } },
+      },
     })
 
     if (!existing) {
@@ -146,7 +149,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       action: AuditAction.SUPPLY_UPDATED,
       entityType: 'SupplyCommitment',
       entityId: commitment.id,
-      metadata: { before: existing, after: commitment },
+      metadata: {
+        routeKey: commitment.routeKey,
+        supplierName: commitment.party.name,
+        before: existing,
+        after: commitment,
+      },
     })
 
     // Notify demand planners who created forecasts for this route
@@ -188,7 +196,10 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     const { id } = await params
     const existing = await prisma.supplyCommitment.findUnique({
       where: { id },
-      include: { planningWeek: true },
+      include: {
+        planningWeek: true,
+        party: { select: { name: true } },
+      },
     })
 
     if (!existing) {
@@ -215,7 +226,11 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       action: AuditAction.SUPPLY_DELETED,
       entityType: 'SupplyCommitment',
       entityId: id,
-      metadata: { routeKey: existing.routeKey, partyId: existing.partyId },
+      metadata: {
+        routeKey: existing.routeKey,
+        partyId: existing.partyId,
+        supplierName: existing.party?.name,
+      },
     })
 
     return NextResponse.json({ success: true, data: { message: 'Commitment deleted' } })

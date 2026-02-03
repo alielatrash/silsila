@@ -244,14 +244,14 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-2">
                         <span className={cn(
                           "inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap min-w-[130px]",
-                          isFilled && "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400",
-                          !isFilled && "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400"
+                          isFilled && "bg-emerald-100 text-emerald-600",
+                          !isFilled && "bg-red-100 text-red-600"
                         )}>
                           {isFilled ? "CAPACITY FILLED" : "FILL RISK"}
                         </span>
                         <span className={cn(
-                          "inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap min-w-[80px]",
-                          isFilled ? "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400" : "bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-400"
+                          "text-sm font-semibold min-w-[100px]",
+                          isFilled ? "text-emerald-600" : "text-red-600"
                         )}>
                           {isFilled ? (route.gap < 0 ? `+${Math.abs(route.gap)}` : route.gap) : route.gap} ({gapPercent > 0 ? '+' : ''}{gapPercent}%)
                         </span>

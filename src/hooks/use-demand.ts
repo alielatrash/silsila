@@ -8,7 +8,8 @@ interface DemandForecastWithRelations extends Omit<DemandForecast, 'party' | 'pi
   pickupLocation: Pick<Location, 'id' | 'name' | 'code' | 'region'>
   dropoffLocation: Pick<Location, 'id' | 'name' | 'code' | 'region'>
   demandCategory?: Pick<DemandCategory, 'id' | 'name' | 'code'> | null
-  resourceType: Pick<ResourceType, 'id' | 'name'>
+  resourceTypes: Pick<ResourceType, 'id' | 'name'>[]
+  resourceType?: Pick<ResourceType, 'id' | 'name'> | null // Backward compatibility
   planningWeek: Pick<PlanningWeek, 'id' | 'weekStart' | 'weekEnd'>
   createdBy: { id: string; firstName: string; lastName: string }
 }
@@ -78,7 +79,7 @@ interface CreateDemandForecastInput {
   pickupCityId: string
   dropoffCityId: string
   demandCategoryId?: string
-  truckTypeId: string
+  truckTypeIds: string[]
   day1Loads?: number
   day2Loads?: number
   day3Loads?: number
@@ -131,8 +132,8 @@ interface UpdateDemandForecastInput {
   week4Loads?: number
   week5Loads?: number
   demandCategoryId?: string
-  truckTypeId?: string
-  [key: string]: string | number | undefined
+  truckTypeIds?: string[]
+  [key: string]: string | number | string[] | undefined
 }
 
 export function useUpdateDemandForecast() {

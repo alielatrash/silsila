@@ -9,6 +9,7 @@ interface SupplyTarget {
   committed: { day1: number; day2: number; day3: number; day4: number; day5: number; day6: number; day7: number; week1: number; week2: number; week3: number; week4: number; total: number }
   gap: { day1: number; day2: number; day3: number; day4: number; day5: number; day6: number; day7: number; week1: number; week2: number; week3: number; week4: number; total: number }
   gapPercent: number
+  truckTypes: Array<{ id: string; name: string }>
   clients: Array<{
     client: { id: string; name: string; code: string | null }
     day1: number
@@ -23,14 +24,14 @@ interface SupplyTarget {
   commitments: Array<{
     id: string
     party: { id: string; name: string; code: string | null }
-    day1: number
-    day2: number
-    day3: number
-    day4: number
-    day5: number
-    day6: number
-    day7: number
-    total: number
+    day1Committed: number
+    day2Committed: number
+    day3Committed: number
+    day4Committed: number
+    day5Committed: number
+    day6Committed: number
+    day7Committed: number
+    totalCommitted: number
   }>
 }
 
@@ -130,13 +131,11 @@ export function useUpdateSupplyCommitment() {
               // Apply the updates to this commitment
               const updated = { ...c }
               Object.keys(updates).forEach((key) => {
-                // Map API field names (e.g., day1Committed) to display field names (e.g., day1)
-                const displayKey = key.replace('Committed', '')
-                updated[displayKey] = updates[key as keyof typeof updates]
+                updated[key] = updates[key as keyof typeof updates]
               })
 
               // Recalculate total
-              updated.total = updated.day1 + updated.day2 + updated.day3 + updated.day4 + updated.day5 + updated.day6 + updated.day7
+              updated.totalCommitted = updated.day1Committed + updated.day2Committed + updated.day3Committed + updated.day4Committed + updated.day5Committed + updated.day6Committed + updated.day7Committed
 
               return updated
             })
@@ -154,14 +153,14 @@ export function useUpdateSupplyCommitment() {
             }
 
             updatedCommitments.forEach((c: any) => {
-              committed.day1 += c.day1
-              committed.day2 += c.day2
-              committed.day3 += c.day3
-              committed.day4 += c.day4
-              committed.day5 += c.day5
-              committed.day6 += c.day6
-              committed.day7 += c.day7
-              committed.total += c.total
+              committed.day1 += c.day1Committed
+              committed.day2 += c.day2Committed
+              committed.day3 += c.day3Committed
+              committed.day4 += c.day4Committed
+              committed.day5 += c.day5Committed
+              committed.day6 += c.day6Committed
+              committed.day7 += c.day7Committed
+              committed.total += c.totalCommitted
             })
 
             // Recalculate gap
@@ -247,14 +246,14 @@ export function useDeleteSupplyCommitment() {
             }
 
             updatedCommitments.forEach((c: any) => {
-              committed.day1 += c.day1
-              committed.day2 += c.day2
-              committed.day3 += c.day3
-              committed.day4 += c.day4
-              committed.day5 += c.day5
-              committed.day6 += c.day6
-              committed.day7 += c.day7
-              committed.total += c.total
+              committed.day1 += c.day1Committed
+              committed.day2 += c.day2Committed
+              committed.day3 += c.day3Committed
+              committed.day4 += c.day4Committed
+              committed.day5 += c.day5Committed
+              committed.day6 += c.day6Committed
+              committed.day7 += c.day7Committed
+              committed.total += c.totalCommitted
             })
 
             // Recalculate gap

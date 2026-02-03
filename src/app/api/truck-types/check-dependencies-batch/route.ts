@@ -29,12 +29,14 @@ export async function POST(request: NextRequest) {
     console.log('[check-dependencies-batch] Checking dependencies for', truckTypeIds.length, 'truck types')
     console.log('[check-dependencies-batch] Organization ID:', session.user.currentOrgId)
 
-    // Get forecast counts for truck types
-    const forecasts = await prisma.demandForecast.groupBy({
+    // Get forecast counts for truck types through junction table
+    const forecastResourceTypes = await prisma.demandForecastResourceType.groupBy({
       by: ['resourceTypeId'],
       where: {
         resourceTypeId: { in: truckTypeIds },
-        organizationId: session.user.currentOrgId,
+        demandForecast: {
+          organizationId: session.user.currentOrgId,
+        },
       },
       _count: {
         id: true,
@@ -53,13 +55,13 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    console.log('[check-dependencies-batch] Found forecasts for', forecasts.length, 'truck types')
+    console.log('[check-dependencies-batch] Found forecasts for', forecastResourceTypes.length, 'truck types')
     console.log('[check-dependencies-batch] Found commitments for', commitments.length, 'truck types')
 
     // Build a map of truckTypeId -> total count (forecasts + commitments)
     const dependencyCounts = new Map<string, number>()
 
-    forecasts.forEach((f) => {
+    forecastResourceTypes.forEach((f) => {
       dependencyCounts.set(f.resourceTypeId, (dependencyCounts.get(f.resourceTypeId) || 0) + f._count.id)
     })
 

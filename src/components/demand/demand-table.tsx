@@ -42,7 +42,8 @@ interface DemandForecastWithRelations extends DemandForecast {
   pickupLocation: Pick<Location, 'id' | 'name' | 'code' | 'region'>
   dropoffLocation: Pick<Location, 'id' | 'name' | 'code' | 'region'>
   demandCategory?: Pick<DemandCategory, 'id' | 'name' | 'code'> | null
-  resourceType: Pick<ResourceType, 'id' | 'name'>
+  resourceTypes: Pick<ResourceType, 'id' | 'name'>[]
+  resourceType?: Pick<ResourceType, 'id' | 'name'> | null // Backward compatibility
   createdBy: { id: string; firstName: string; lastName: string }
 }
 
@@ -305,7 +306,11 @@ export function DemandTable({ data, isLoading, onEditForecast, weekStart, planni
                   )}
                 </TableCell>
               )}
-              <TableCell className="text-sm">{forecast.resourceType.name}</TableCell>
+              <TableCell className="text-sm">
+                {forecast.resourceTypes?.length > 0
+                  ? forecast.resourceTypes.map(rt => rt.name).join(', ')
+                  : forecast.resourceType?.name || '-'}
+              </TableCell>
               {isMonthlyPlanning ? (
                 MONTH_WEEKS.map((week, weekIndex) => {
                   const weekNum = `week${weekIndex + 1}` as string

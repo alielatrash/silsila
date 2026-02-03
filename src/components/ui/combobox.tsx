@@ -82,13 +82,13 @@ export function Combobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-        <Command shouldFilter={false}>
+        <Command shouldFilter={false} className="max-h-[400px]">
           <CommandInput
             placeholder={searchPlaceholder}
             value={searchValue}
             onValueChange={handleSearchChange}
           />
-          <CommandList className="max-h-[300px] overflow-y-auto">
+          <CommandList className="max-h-[300px] overflow-y-scroll">
             <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
               {options

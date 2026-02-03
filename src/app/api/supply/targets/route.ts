@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     }
 
     // Run queries in parallel for better performance (with org scoping)
-    const [aggregatedDemand, commitments, demandForecasts] = await Promise.all([
+    const [aggregatedDemand, commitments, demandForecasts, forecastResourceTypes] = await Promise.all([
       // Aggregate demand forecasts by routeKey
       prisma.demandForecast.groupBy({
         by: ['routeKey'],
@@ -53,6 +53,7 @@ export async function GET(request: Request) {
       prisma.demandForecast.findMany({
         where: orgScopedWhere(session, { planningWeekId }),
         select: {
+          id: true,
           routeKey: true,
           party: { select: { id: true, name: true } },
           day1Qty: true,
@@ -67,6 +68,16 @@ export async function GET(request: Request) {
         orderBy: [
           { party: { name: 'asc' } },
         ],
+      }),
+      // Get truck types through junction table
+      prisma.demandForecastResourceType.findMany({
+        where: {
+          demandForecast: orgScopedWhere(session, { planningWeekId }),
+        },
+        select: {
+          demandForecastId: true,
+          resourceType: { select: { id: true, name: true } },
+        },
       }),
     ])
 
@@ -87,6 +98,27 @@ export async function GET(request: Request) {
       acc[forecast.routeKey].push(forecast)
       return acc
     }, {} as Record<string, typeof demandForecasts>)
+
+    // Group resource types by forecast ID
+    const resourceTypesByForecast = forecastResourceTypes.reduce((acc, frt) => {
+      if (!acc[frt.demandForecastId]) {
+        acc[frt.demandForecastId] = []
+      }
+      acc[frt.demandForecastId].push(frt.resourceType)
+      return acc
+    }, {} as Record<string, Array<{ id: string; name: string }>>)
+
+    // Aggregate unique truck types by routeKey
+    const truckTypesByRouteKey = demandForecasts.reduce((acc, forecast) => {
+      const truckTypes = resourceTypesByForecast[forecast.id] || []
+      if (!acc[forecast.routeKey]) {
+        acc[forecast.routeKey] = new Map<string, { id: string; name: string }>()
+      }
+      truckTypes.forEach((tt) => {
+        acc[forecast.routeKey].set(tt.id, tt)
+      })
+      return acc
+    }, {} as Record<string, Map<string, { id: string; name: string }>>)
 
     // Build targets with gap calculation
     const targets = aggregatedDemand.map((demand) => {
@@ -147,6 +179,11 @@ export async function GET(request: Request) {
         total: f.totalQty,
       }))
 
+      // Get unique truck types for this route
+      const routeTruckTypes = truckTypesByRouteKey[demand.routeKey]
+        ? Array.from(truckTypesByRouteKey[demand.routeKey].values())
+        : []
+
       return {
         routeKey: demand.routeKey,
         forecastCount: demand._count.id,
@@ -154,6 +191,7 @@ export async function GET(request: Request) {
         committed: totalCommitments,
         gap,
         gapPercent,
+        truckTypes: routeTruckTypes,
         clients: clientBreakdown,
         commitments: routeCommitments.map((c) => ({
           id: c.id,

@@ -18,7 +18,8 @@ interface DemandForecastWithRelations extends Omit<DemandForecast, 'party' | 'pi
   pickupLocation: Pick<Location, 'id' | 'name' | 'code' | 'region'>
   dropoffLocation: Pick<Location, 'id' | 'name' | 'code' | 'region'>
   demandCategory?: Pick<DemandCategory, 'id' | 'name' | 'code'> | null
-  resourceType: Pick<ResourceType, 'id' | 'name'>
+  resourceTypes: Pick<ResourceType, 'id' | 'name'>[]
+  resourceType?: Pick<ResourceType, 'id' | 'name'> | null // Backward compatibility
   createdBy: { id: string; firstName: string; lastName: string }
 }
 
@@ -87,7 +88,7 @@ export default function DemandPlanningPage() {
       f.dropoffLocation.name,
       `${f.pickupLocation.region} → ${f.dropoffLocation.region}`,
       ...(isCategoryEnabled ? [f.demandCategory?.name || ''] : []),
-      f.resourceType.name,
+      f.resourceTypes?.map(rt => rt.name).join(', ') || f.resourceType?.name || '',
       f.day1Qty,
       f.day2Qty,
       f.day3Qty,

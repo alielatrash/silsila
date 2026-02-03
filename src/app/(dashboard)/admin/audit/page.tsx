@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { PageHeader } from '@/components/layout'
 import {
@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { formatAuditMessage, getActionCategory, getActionIcon } from '@/lib/audit-formatter'
 
 interface AuditLogEntry {
   id: string
@@ -41,17 +42,23 @@ interface AuditLogEntry {
 }
 
 const actionColors: Record<string, string> = {
-  CREATE: 'bg-green-100 text-green-800',
-  UPDATE: 'bg-blue-100 text-blue-800',
-  DELETE: 'bg-red-100 text-red-800',
-  LOGIN: 'bg-purple-100 text-purple-800',
-  LOGOUT: 'bg-gray-100 text-gray-800',
+  create: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-500',
+  update: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-500',
+  delete: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-500',
+  auth: 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-500',
+  other: 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-500',
 }
 
 export default function AuditLogPage() {
   const [page, setPage] = useState(1)
   const [actionFilter, setActionFilter] = useState<string>('ALL')
+  const [mounted, setMounted] = useState(false)
   const limit = 20
+
+  // Prevent hydration mismatch by only rendering Select after mount
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'audit', page, actionFilter],
@@ -75,30 +82,30 @@ export default function AuditLogPage() {
         title="Audit Log"
         description="Track all system activities and changes"
       >
-        <Select value={actionFilter} onValueChange={setActionFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="All actions" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All actions</SelectItem>
-            <SelectItem value="CREATE">Create</SelectItem>
-            <SelectItem value="UPDATE">Update</SelectItem>
-            <SelectItem value="DELETE">Delete</SelectItem>
-            <SelectItem value="LOGIN">Login</SelectItem>
-            <SelectItem value="LOGOUT">Logout</SelectItem>
-          </SelectContent>
-        </Select>
+        {mounted && (
+          <Select value={actionFilter} onValueChange={setActionFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All actions" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All actions</SelectItem>
+              <SelectItem value="CREATE">Create</SelectItem>
+              <SelectItem value="UPDATE">Update</SelectItem>
+              <SelectItem value="DELETE">Delete</SelectItem>
+              <SelectItem value="LOGIN">Login</SelectItem>
+              <SelectItem value="LOGOUT">Logout</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </PageHeader>
 
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Timestamp</TableHead>
-              <TableHead>User</TableHead>
-              <TableHead>Action</TableHead>
-              <TableHead>Entity</TableHead>
-              <TableHead>Details</TableHead>
+              <TableHead className="w-[180px]">Timestamp</TableHead>
+              <TableHead className="w-[200px]">User</TableHead>
+              <TableHead>Activity</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -107,51 +114,67 @@ export default function AuditLogPage() {
                 <TableRow key={i}>
                   <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-40" /></TableCell>
-                  <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                 </TableRow>
               ))
             ) : data?.entries.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
                   No audit entries found
                 </TableCell>
               </TableRow>
             ) : (
-              data?.entries.map((entry) => (
-                <TableRow key={entry.id}>
-                  <TableCell className="text-muted-foreground whitespace-nowrap">
-                    {new Date(entry.createdAt).toLocaleString()}
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">
-                        {entry.user.firstName || entry.user.lastName
-                          ? `${entry.user.firstName || ''} ${entry.user.lastName || ''}`.trim()
-                          : entry.user.email}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{entry.user.email}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={actionColors[entry.action] || 'bg-gray-100 text-gray-800'}>
-                      {entry.action}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {entry.entityType && (
-                      <span className="font-mono text-sm">
-                        {entry.entityType}
-                        {entry.entityId && <span className="text-muted-foreground">:{entry.entityId.slice(0, 8)}</span>}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="max-w-[300px] truncate text-sm text-muted-foreground">
-                    {entry.metadata ? JSON.stringify(entry.metadata) : '—'}
-                  </TableCell>
-                </TableRow>
-              ))
+              data?.entries.map((entry) => {
+                const userName = entry.user.firstName || entry.user.lastName
+                  ? `${entry.user.firstName || ''} ${entry.user.lastName || ''}`.trim()
+                  : 'User'
+                const category = getActionCategory(entry.action)
+                const icon = getActionIcon(entry.action)
+                const message = formatAuditMessage(entry, userName)
+
+                return (
+                  <TableRow key={entry.id}>
+                    <TableCell className="text-muted-foreground whitespace-nowrap text-sm">
+                      {new Date(entry.createdAt).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium text-sm">
+                          {entry.user.firstName || entry.user.lastName
+                            ? `${entry.user.firstName || ''} ${entry.user.lastName || ''}`.trim()
+                            : entry.user.email.split('@')[0]}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{entry.user.email}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-start gap-3">
+                        <span className="text-xl mt-0.5">{icon}</span>
+                        <div className="flex-1">
+                          <p className="text-sm">
+                            <span className="font-medium">{userName}</span>{' '}
+                            <span className="text-foreground">{message}</span>
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="outline" className={actionColors[category]}>
+                              {category}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {entry.action}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
             )}
           </TableBody>
         </Table>

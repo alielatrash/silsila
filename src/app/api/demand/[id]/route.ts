@@ -24,7 +24,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         party: { select: { id: true, name: true } },
         pickupLocation: { select: { id: true, name: true, code: true, region: true } },
         dropoffLocation: { select: { id: true, name: true, code: true, region: true } },
-        resourceType: { select: { id: true, name: true } },
+        resourceTypes: { include: { resourceType: { select: { id: true, name: true } } } },
         planningWeek: { select: { id: true, weekStart: true, weekEnd: true } },
         createdBy: { select: { id: true, firstName: true, lastName: true } },
       },
@@ -40,7 +40,14 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Verify ownership
     verifyOrgOwnership(session, forecast)
 
-    return NextResponse.json({ success: true, data: forecast })
+    // Transform resourceTypes to flatten the structure
+    const transformedForecast = {
+      ...forecast,
+      resourceTypes: forecast.resourceTypes.map(rt => rt.resourceType),
+      resourceType: forecast.resourceTypes[0]?.resourceType || null, // Backward compatibility
+    }
+
+    return NextResponse.json({ success: true, data: transformedForecast })
   } catch (error) {
     console.error('Get demand forecast error:', error)
     return NextResponse.json(
@@ -91,6 +98,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       select: {
         id: true,
         organizationId: true,
+        routeKey: true,
         day1Qty: true,
         day2Qty: true,
         day3Qty: true,
@@ -105,6 +113,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         week5Qty: true,
         planningWeekId: true,
         partyId: true,
+        party: {
+          select: { name: true },
+        },
         planningWeek: {
           select: { isLocked: true },
         },
@@ -151,31 +162,54 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     // Use whichever total is non-zero
     const totalQty = dayTotal > 0 ? dayTotal : weekTotal
 
-    // Update without expensive includes - frontend will refetch via cache invalidation
-    const forecast = await prisma.demandForecast.update({
-      where: { id },
-      data: {
-        ...(data.day1Loads !== undefined && { day1Qty: data.day1Loads }),
-        ...(data.day2Loads !== undefined && { day2Qty: data.day2Loads }),
-        ...(data.day3Loads !== undefined && { day3Qty: data.day3Loads }),
-        ...(data.day4Loads !== undefined && { day4Qty: data.day4Loads }),
-        ...(data.day5Loads !== undefined && { day5Qty: data.day5Loads }),
-        ...(data.day6Loads !== undefined && { day6Qty: data.day6Loads }),
-        ...(data.day7Loads !== undefined && { day7Qty: data.day7Loads }),
-        ...(data.week1Loads !== undefined && { week1Qty: data.week1Loads }),
-        ...(data.week2Loads !== undefined && { week2Qty: data.week2Loads }),
-        ...(data.week3Loads !== undefined && { week3Qty: data.week3Loads }),
-        ...(data.week4Loads !== undefined && { week4Qty: data.week4Loads }),
-        ...(data.week5Loads !== undefined && { week5Qty: data.week5Loads }),
-        totalQty,
-      },
-      select: {
-        id: true,
-        planningWeekId: true,
-        partyId: true,
-        totalQty: true,
-        updatedAt: true,
-      },
+    // Update using transaction to handle both forecast and resource types
+    const forecast = await prisma.$transaction(async (tx) => {
+      // Update the forecast
+      const updatedForecast = await tx.demandForecast.update({
+        where: { id },
+        data: {
+          ...(data.day1Loads !== undefined && { day1Qty: data.day1Loads }),
+          ...(data.day2Loads !== undefined && { day2Qty: data.day2Loads }),
+          ...(data.day3Loads !== undefined && { day3Qty: data.day3Loads }),
+          ...(data.day4Loads !== undefined && { day4Qty: data.day4Loads }),
+          ...(data.day5Loads !== undefined && { day5Qty: data.day5Loads }),
+          ...(data.day6Loads !== undefined && { day6Qty: data.day6Loads }),
+          ...(data.day7Loads !== undefined && { day7Qty: data.day7Loads }),
+          ...(data.week1Loads !== undefined && { week1Qty: data.week1Loads }),
+          ...(data.week2Loads !== undefined && { week2Qty: data.week2Loads }),
+          ...(data.week3Loads !== undefined && { week3Qty: data.week3Loads }),
+          ...(data.week4Loads !== undefined && { week4Qty: data.week4Loads }),
+          ...(data.week5Loads !== undefined && { week5Qty: data.week5Loads }),
+          totalQty,
+        },
+        select: {
+          id: true,
+          planningWeekId: true,
+          partyId: true,
+          totalQty: true,
+          updatedAt: true,
+        },
+      })
+
+      // Update resource types if provided
+      if (data.truckTypeIds !== undefined) {
+        // Delete existing resource type associations
+        await tx.demandForecastResourceType.deleteMany({
+          where: { demandForecastId: id },
+        })
+
+        // Create new resource type associations
+        if (data.truckTypeIds.length > 0) {
+          await tx.demandForecastResourceType.createMany({
+            data: data.truckTypeIds.map((resourceTypeId) => ({
+              demandForecastId: id,
+              resourceTypeId,
+            })),
+          })
+        }
+      }
+
+      return updatedForecast
     })
 
     // Create audit log asynchronously with minimal metadata
@@ -185,7 +219,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       entityType: 'DemandForecast',
       entityId: forecast.id,
       metadata: {
+        routeKey: existing.routeKey,
         partyId: existing.partyId,
+        clientName: existing.party?.name,
         planningWeekId: existing.planningWeekId,
         changes: data,
       },
@@ -221,7 +257,10 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     const { id } = await params
     const existing = await prisma.demandForecast.findUnique({
       where: { id },
-      include: { planningWeek: true },
+      include: {
+        planningWeek: true,
+        party: { select: { name: true } },
+      },
     })
 
     if (!existing) {
@@ -275,6 +314,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       metadata: {
         routeKey: existing.routeKey,
         partyId: existing.partyId,
+        clientName: existing.party?.name,
         cascadedSupplyDelete: suppliesDeleted > 0,
         suppliesDeletedCount: suppliesDeleted
       },

@@ -166,7 +166,19 @@ export async function POST(request: Request) {
       action: AuditAction.SUPPLY_COMMITTED,
       entityType: 'SupplyCommitment',
       entityId: commitment.id,
-      metadata: { routeKey: data.routeKey, totalCommitted, partyId: data.supplierId },
+      metadata: {
+        routeKey: data.routeKey,
+        totalCommitted,
+        partyId: data.supplierId,
+        supplierName: commitment.party.name,
+        day1Committed: data.day1Committed || 0,
+        day2Committed: data.day2Committed || 0,
+        day3Committed: data.day3Committed || 0,
+        day4Committed: data.day4Committed || 0,
+        day5Committed: data.day5Committed || 0,
+        day6Committed: data.day6Committed || 0,
+        day7Committed: data.day7Committed || 0,
+      },
     }).catch((err) => console.error('Failed to create audit log:', err))
 
     // Notify demand planners who created forecasts for this route

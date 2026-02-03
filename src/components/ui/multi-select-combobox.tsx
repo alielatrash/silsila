@@ -69,7 +69,7 @@ export function MultiSelectCombobox({
     onValueChange?.(newValue)
   }
 
-  const handleRemove = (valueToRemove: string, e: React.MouseEvent) => {
+  const handleRemove = (valueToRemove: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation()
     const newValue = value.filter((v) => v !== valueToRemove)
     onValueChange?.(newValue)
@@ -122,13 +122,13 @@ export function MultiSelectCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-        <Command shouldFilter={false}>
+        <Command shouldFilter={false} className="max-h-[400px]">
           <CommandInput
             placeholder={searchPlaceholder}
             value={searchValue}
             onValueChange={handleSearchChange}
           />
-          <CommandList>
+          <CommandList className="max-h-[300px] overflow-y-scroll">
             <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
               {options
