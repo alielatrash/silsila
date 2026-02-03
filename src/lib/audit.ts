@@ -70,6 +70,9 @@ export const AuditAction = {
   TRUCK_TYPE_CREATED: 'truck_type.created',
   TRUCK_TYPE_UPDATED: 'truck_type.updated',
   TRUCK_TYPE_DELETED: 'truck_type.deleted',
+  DEMAND_CATEGORY_CREATED: 'demand_category.created',
+  DEMAND_CATEGORY_UPDATED: 'demand_category.updated',
+  DEMAND_CATEGORY_DELETED: 'demand_category.deleted',
 
   // Admin
   USER_ROLE_CHANGED: 'user.role_changed',

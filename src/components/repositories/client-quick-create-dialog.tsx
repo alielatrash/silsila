@@ -11,6 +11,7 @@ interface ClientQuickCreateDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: (client: Party) => void
+  initialName?: string
 }
 
 const clientFields = [
@@ -19,19 +20,20 @@ const clientFields = [
   { name: 'phoneNumber', label: 'Phone Number', placeholder: 'Contact phone number' },
 ]
 
-const defaultValues = {
-  name: '',
-  pointOfContact: '',
-  phoneNumber: '',
-}
-
 export function ClientQuickCreateDialog({
   open,
   onOpenChange,
   onSuccess,
+  initialName = '',
 }: ClientQuickCreateDialogProps) {
   const [isLoading, setIsLoading] = useState(false)
   const createClient = useCreateClient()
+
+  const defaultValues = {
+    name: initialName,
+    pointOfContact: '',
+    phoneNumber: '',
+  }
 
   const handleSubmit = async (data: typeof defaultValues) => {
     setIsLoading(true)

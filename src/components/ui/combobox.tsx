@@ -34,6 +34,7 @@ interface ComboboxProps {
   disabled?: boolean
   className?: string
   footerAction?: React.ReactNode
+  onSearchChange?: (search: string) => void
 }
 
 export function Combobox({
@@ -46,10 +47,17 @@ export function Combobox({
   disabled,
   className,
   footerAction,
+  onSearchChange,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
+  const [searchValue, setSearchValue] = React.useState('')
 
   const selectedOption = options.find((option) => option.value === value)
+
+  const handleSearchChange = (search: string) => {
+    setSearchValue(search)
+    onSearchChange?.(search)
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -80,7 +88,11 @@ export function Combobox({
             return valueLower.includes(searchLower) ? 1 : 0
           }}
         >
-          <CommandInput placeholder={searchPlaceholder} />
+          <CommandInput
+            placeholder={searchPlaceholder}
+            value={searchValue}
+            onValueChange={handleSearchChange}
+          />
           <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>

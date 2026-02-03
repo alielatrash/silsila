@@ -11,6 +11,7 @@ interface CityQuickCreateDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: (city: Location) => void
+  initialName?: string
 }
 
 const cityFields = [
@@ -20,20 +21,21 @@ const cityFields = [
   { name: 'region', label: 'Region', placeholder: 'Enter region (optional)' },
 ]
 
-const defaultValues = {
-  name: '',
-  nameAr: '',
-  code: '',
-  region: '',
-}
-
 export function CityQuickCreateDialog({
   open,
   onOpenChange,
   onSuccess,
+  initialName = '',
 }: CityQuickCreateDialogProps) {
   const [isLoading, setIsLoading] = useState(false)
   const createCity = useCreateCity()
+
+  const defaultValues = {
+    name: initialName,
+    nameAr: '',
+    code: '',
+    region: '',
+  }
 
   const handleSubmit = async (data: typeof defaultValues) => {
     setIsLoading(true)

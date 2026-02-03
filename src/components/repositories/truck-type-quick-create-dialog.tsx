@@ -11,23 +11,25 @@ interface TruckTypeQuickCreateDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: (truckType: ResourceType) => void
+  initialName?: string
 }
 
 const truckTypeFields = [
   { name: 'name', label: 'Truck Type Name', placeholder: 'Enter truck type name (e.g., 10T Truck)', required: true },
 ]
 
-const defaultValues = {
-  name: '',
-}
-
 export function TruckTypeQuickCreateDialog({
   open,
   onOpenChange,
   onSuccess,
+  initialName = '',
 }: TruckTypeQuickCreateDialogProps) {
   const [isLoading, setIsLoading] = useState(false)
   const createTruckType = useCreateTruckType()
+
+  const defaultValues = {
+    name: initialName,
+  }
 
   const handleSubmit = async (data: typeof defaultValues) => {
     setIsLoading(true)
