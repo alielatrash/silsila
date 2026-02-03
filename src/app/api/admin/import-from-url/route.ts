@@ -121,9 +121,18 @@ export async function POST(request: Request) {
           }
         }
 
+        // If no recognized column found, use the first column
+        if (!name) {
+          const firstColumnName = Object.keys(row)[0]
+          if (firstColumnName && row[firstColumnName]) {
+            name = String(row[firstColumnName]).trim()
+            console.log(`[CSV Import] Using first column "${firstColumnName}" as name for row ${index + 1}`)
+          }
+        }
+
         if (!name) {
           const availableColumns = Object.keys(row).slice(0, 5).join(', ')
-          results.errors.push(`Row ${index + 1}: Name column not found. Available columns: ${availableColumns}`)
+          results.errors.push(`Row ${index + 1}: No valid name found in any column. Available columns: ${availableColumns}`)
           results.skipped++
           continue
         }
