@@ -369,7 +369,8 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
             <div>
               <FormLabel>{isMonthlyPlanning ? 'Weekly Committed Supply (Week 1-4)' : 'Daily Committed Supply (Sun-Sat)'}</FormLabel>
               {isMonthlyPlanning ? (
-                <div className="grid grid-cols-4 gap-2 mt-2">
+                <div className="grid grid-cols-5 gap-2 mt-2">
+                  <div></div>
                   {MONTH_WEEKS.map((week, index) => (
                     <FormField
                       key={week.key}
@@ -400,7 +401,8 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-7 gap-2 mt-2">
+                <div className="grid grid-cols-8 gap-2 mt-2">
+                  <div></div>
                   {WEEK_DAYS.map((day, index) => (
                     <FormField
                       key={day.key}
