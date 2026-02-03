@@ -156,6 +156,8 @@ export default function SupplyPlanningPage() {
           data={targetsData?.data}
           isLoading={isLoading}
           onAddCommitment={handleAddCommitment}
+          planningWeekId={selectedWeekId}
+          weekStart={weeksData?.data?.find(w => w.id === selectedWeekId)?.weekStart}
         />
       ) : (
         <div className="rounded-md border p-8 text-center">

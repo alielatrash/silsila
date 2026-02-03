@@ -101,6 +101,18 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
     })
   }, [isMonthlyPlanning, planningWeeksData, planningWeekId])
 
+  // Calculate dates for each day of the week
+  const dayDates = useMemo(() => {
+    if (!weekStart) return []
+
+    const startDate = new Date(weekStart)
+    return WEEK_DAYS.map((_, index) => {
+      const date = new Date(startDate)
+      date.setDate(date.getDate() + index)
+      return format(date, 'dd-MMM')
+    })
+  }, [weekStart])
+
   const toggleRow = (routeKey: string) => {
     const newExpanded = new Set(expandedRows)
     if (newExpanded.has(routeKey)) {
@@ -170,14 +182,23 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
             <TableRow>
               <TableHead className="w-8"></TableHead>
               <TableHead>Route</TableHead>
-              <TableHead>Row</TableHead>
+              <TableHead className="w-20">Plan</TableHead>
               {isMonthlyPlanning ? (
                 MONTH_WEEKS.map((week) => (
                   <TableHead key={week.key} className="text-center w-20">{week.label}</TableHead>
                 ))
               ) : (
-                WEEK_DAYS.map((day) => (
-                  <TableHead key={day.key} className="text-center w-16">{day.label}</TableHead>
+                WEEK_DAYS.map((day, index) => (
+                  <TableHead key={day.key} className="text-center w-16">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span>{day.label}</span>
+                      {dayDates[index] && (
+                        <span className="text-[10px] font-normal text-muted-foreground">
+                          {dayDates[index]}
+                        </span>
+                      )}
+                    </div>
+                  </TableHead>
                 ))
               )}
               <TableHead className="text-center">Total</TableHead>
@@ -214,7 +235,7 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
           <TableRow>
             <TableHead className="w-8"></TableHead>
             <TableHead className="sticky left-0 bg-background">Route</TableHead>
-            <TableHead>Row</TableHead>
+            <TableHead className="w-20">Plan</TableHead>
             {isMonthlyPlanning ? (
               MONTH_WEEKS.map((week, index) => (
                 <TableHead key={week.key} className="text-center w-20">
@@ -229,8 +250,17 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
                 </TableHead>
               ))
             ) : (
-              WEEK_DAYS.map((day) => (
-                <TableHead key={day.key} className="text-center w-16">{day.label}</TableHead>
+              WEEK_DAYS.map((day, index) => (
+                <TableHead key={day.key} className="text-center w-16">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span>{day.label}</span>
+                    {dayDates[index] && (
+                      <span className="text-[10px] font-normal text-muted-foreground">
+                        {dayDates[index]}
+                      </span>
+                    )}
+                  </div>
+                </TableHead>
               ))
             )}
             <TableHead className="text-center font-semibold">Total</TableHead>
@@ -307,7 +337,7 @@ export function SupplyTable({ data, isLoading, onAddCommitment, planningWeekId, 
                 </TableRow>
 
                 {/* Gap Row */}
-                <TableRow className="border-b hover:bg-slate-50/30">
+                <TableRow className="border-b-2 border-slate-300 hover:bg-slate-50/30">
                   <TableCell></TableCell>
                   <TableCell></TableCell>
                   <TableCell>
