@@ -108,7 +108,100 @@ export function useUpdateSupplyCommitment() {
       if (!result.success) throw new Error(result.error.message)
       return result.data
     },
-    onSuccess: () => {
+    // Optimistic update: update cache immediately before API call
+    onMutate: async ({ id, ...updates }) => {
+      // Cancel any outgoing refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey: ['supplyTargets'] })
+
+      // Snapshot the previous value for rollback
+      const previousTargets = queryClient.getQueryData(['supplyTargets'])
+
+      // Optimistically update the cache
+      queryClient.setQueriesData({ queryKey: ['supplyTargets'] }, (old: any) => {
+        if (!old?.data) return old
+
+        return {
+          ...old,
+          data: old.data.map((target: any) => {
+            // Find the commitment that was updated
+            const updatedCommitments = target.commitments.map((c: any) => {
+              if (c.id !== id) return c
+
+              // Apply the updates to this commitment
+              const updated = { ...c }
+              Object.keys(updates).forEach((key) => {
+                // Map API field names (e.g., day1Committed) to display field names (e.g., day1)
+                const displayKey = key.replace('Committed', '')
+                updated[displayKey] = updates[key as keyof typeof updates]
+              })
+
+              // Recalculate total
+              updated.total = updated.day1 + updated.day2 + updated.day3 + updated.day4 + updated.day5 + updated.day6 + updated.day7
+
+              return updated
+            })
+
+            // Recalculate committed totals for this route
+            const committed = {
+              day1: 0,
+              day2: 0,
+              day3: 0,
+              day4: 0,
+              day5: 0,
+              day6: 0,
+              day7: 0,
+              total: 0,
+            }
+
+            updatedCommitments.forEach((c: any) => {
+              committed.day1 += c.day1
+              committed.day2 += c.day2
+              committed.day3 += c.day3
+              committed.day4 += c.day4
+              committed.day5 += c.day5
+              committed.day6 += c.day6
+              committed.day7 += c.day7
+              committed.total += c.total
+            })
+
+            // Recalculate gap
+            const gap = {
+              day1: target.target.day1 - committed.day1,
+              day2: target.target.day2 - committed.day2,
+              day3: target.target.day3 - committed.day3,
+              day4: target.target.day4 - committed.day4,
+              day5: target.target.day5 - committed.day5,
+              day6: target.target.day6 - committed.day6,
+              day7: target.target.day7 - committed.day7,
+              total: target.target.total - committed.total,
+            }
+
+            const gapPercent = target.target.total > 0
+              ? Math.round((gap.total / target.target.total) * 100)
+              : 0
+
+            return {
+              ...target,
+              commitments: updatedCommitments,
+              committed,
+              gap,
+              gapPercent,
+            }
+          }),
+        }
+      })
+
+      // Return context with snapshot for rollback
+      return { previousTargets }
+    },
+    // Rollback on error
+    onError: (err, variables, context) => {
+      if (context?.previousTargets) {
+        queryClient.setQueryData(['supplyTargets'], context.previousTargets)
+      }
+    },
+    // Refetch to ensure consistency after success or error
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['supplyTargets'] })
     },
   })
@@ -123,7 +216,85 @@ export function useDeleteSupplyCommitment() {
       if (!result.success) throw new Error(result.error.message)
       return result.data
     },
-    onSuccess: () => {
+    // Optimistic update: remove commitment from cache immediately
+    onMutate: async (id: string) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['supplyTargets'] })
+
+      // Snapshot the previous value for rollback
+      const previousTargets = queryClient.getQueryData(['supplyTargets'])
+
+      // Optimistically update the cache
+      queryClient.setQueriesData({ queryKey: ['supplyTargets'] }, (old: any) => {
+        if (!old?.data) return old
+
+        return {
+          ...old,
+          data: old.data.map((target: any) => {
+            // Remove the deleted commitment
+            const updatedCommitments = target.commitments.filter((c: any) => c.id !== id)
+
+            // Recalculate committed totals for this route
+            const committed = {
+              day1: 0,
+              day2: 0,
+              day3: 0,
+              day4: 0,
+              day5: 0,
+              day6: 0,
+              day7: 0,
+              total: 0,
+            }
+
+            updatedCommitments.forEach((c: any) => {
+              committed.day1 += c.day1
+              committed.day2 += c.day2
+              committed.day3 += c.day3
+              committed.day4 += c.day4
+              committed.day5 += c.day5
+              committed.day6 += c.day6
+              committed.day7 += c.day7
+              committed.total += c.total
+            })
+
+            // Recalculate gap
+            const gap = {
+              day1: target.target.day1 - committed.day1,
+              day2: target.target.day2 - committed.day2,
+              day3: target.target.day3 - committed.day3,
+              day4: target.target.day4 - committed.day4,
+              day5: target.target.day5 - committed.day5,
+              day6: target.target.day6 - committed.day6,
+              day7: target.target.day7 - committed.day7,
+              total: target.target.total - committed.total,
+            }
+
+            const gapPercent = target.target.total > 0
+              ? Math.round((gap.total / target.target.total) * 100)
+              : 0
+
+            return {
+              ...target,
+              commitments: updatedCommitments,
+              committed,
+              gap,
+              gapPercent,
+            }
+          }),
+        }
+      })
+
+      // Return context with snapshot for rollback
+      return { previousTargets }
+    },
+    // Rollback on error
+    onError: (err, variables, context) => {
+      if (context?.previousTargets) {
+        queryClient.setQueryData(['supplyTargets'], context.previousTargets)
+      }
+    },
+    // Refetch to ensure consistency after success or error
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['supplyTargets'] })
     },
   })
