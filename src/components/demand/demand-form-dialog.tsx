@@ -415,7 +415,10 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
           if (!weekData) return false
 
           // Check if any load field has a value
-          const hasData = Object.values(weekData).some(val => val !== undefined && val !== null && val > 0)
+          const hasData = Object.values(weekData).some(val => {
+            const numVal = typeof val === 'number' ? val : 0
+            return val !== undefined && val !== null && numVal > 0
+          })
           return hasData
         })
 
