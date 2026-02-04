@@ -6,9 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { PageHeader } from '@/components/layout'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
-import { BarChart3, ClipboardList, Package, Truck, ArrowRight } from 'lucide-react'
+import { BarChart3, ClipboardList, Package, Truck, ArrowRight, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/hooks/use-auth'
 
 interface DashboardData {
   currentWeek: {
@@ -41,6 +42,7 @@ interface DashboardData {
 }
 
 export default function DashboardPage() {
+  const { data: auth } = useAuth()
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard'],
     queryFn: async () => {
@@ -51,6 +53,10 @@ export default function DashboardPage() {
     },
   })
 
+  const userRole = auth?.user?.role
+  const canCreateDemand = userRole === 'DEMAND_PLANNER' || userRole === 'ADMIN'
+  const canCreateSupply = userRole === 'SUPPLY_PLANNER' || userRole === 'ADMIN'
+
   return (
     <div>
       <PageHeader
@@ -59,6 +65,28 @@ export default function DashboardPage() {
           ? `Week ${data.currentWeek.weekNumber}, ${data.currentWeek.year} (${new Date(data.currentWeek.weekStart).toLocaleDateString()} - ${new Date(data.currentWeek.weekEnd).toLocaleDateString()})`
           : 'Overview of demand and supply planning'}
       />
+
+      {/* Quick Actions */}
+      {(canCreateDemand || canCreateSupply) && (
+        <div className="flex gap-3 mb-6">
+          {canCreateDemand && (
+            <Button asChild>
+              <Link href="/demand">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Demand Plan
+              </Link>
+            </Button>
+          )}
+          {canCreateSupply && (
+            <Button asChild variant={canCreateDemand ? "outline" : "default"}>
+              <Link href="/supply">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Supply Plan
+              </Link>
+            </Button>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
