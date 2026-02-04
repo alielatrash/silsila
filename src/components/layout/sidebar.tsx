@@ -21,6 +21,7 @@ import {
   LogOut,
   Bell,
   Settings,
+  TrendingUp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Logo } from './logo'
@@ -64,6 +65,7 @@ const navigation: NavItem[] = [
   { title: 'Demand Planning', href: '/demand', icon: ClipboardList, roles: ['DEMAND_PLANNER', 'ADMIN'] },
   { title: 'Supply Planning', href: '/supply', icon: Truck, roles: ['SUPPLY_PLANNER', 'ADMIN'] },
   { title: 'Dispatch Sheet', href: '/dispatch', icon: ClipboardCheck, roles: ['SUPPLY_PLANNER', 'ADMIN'] },
+  { title: 'Intelligence', href: '/intelligence', icon: TrendingUp },
   { title: 'Clients', href: '/repositories/clients', icon: Building2 },
   { title: 'Suppliers', href: '/repositories/suppliers', icon: Package },
   { title: 'Cities', href: '/repositories/cities', icon: MapPin },
