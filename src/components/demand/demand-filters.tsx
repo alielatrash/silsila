@@ -80,7 +80,7 @@ export function DemandFiltersComponent({ planningWeekId, filters, onFiltersChang
 
   return (
     <Card>
-      <CardContent className="pt-6">
+      <CardContent className="py-[5px]">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />

@@ -139,6 +139,17 @@ export default function SupplyPlanningPage() {
 
   return (
     <div>
+      <PageHeader
+        title="Supply Planning"
+        description="Manage supplier commitments by route"
+      >
+        <WeekSelector value={selectedWeekId} onValueChange={handleWeekChange} />
+        <Button variant="outline" onClick={handleDownload} disabled={!targetsData?.data?.length}>
+          <Download className="h-4 w-4" />
+          Download
+        </Button>
+      </PageHeader>
+
       {/* Filters */}
       {selectedWeekId && (
         <div className="pt-0 pb-6">
@@ -149,19 +160,6 @@ export default function SupplyPlanningPage() {
           />
         </div>
       )}
-
-      <div className="mb-6">
-        <PageHeader
-          title="Supply Planning"
-          description="Manage supplier commitments by route"
-        >
-          <WeekSelector value={selectedWeekId} onValueChange={handleWeekChange} />
-          <Button variant="outline" onClick={handleDownload} disabled={!targetsData?.data?.length}>
-            <Download className="h-4 w-4" />
-            Download
-          </Button>
-        </PageHeader>
-      </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-4 gap-4 mb-6">

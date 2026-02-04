@@ -168,6 +168,27 @@ export default function DemandPlanningPage() {
 
   return (
     <div>
+      <PageHeader
+        title="Demand Planning"
+        description={`Forecast ${periodLabel} demand by client and route`}
+      >
+        <WeekSelector value={selectedWeekId} onValueChange={handleWeekChange} />
+        {selectedIds.size > 0 && (
+          <Button variant="destructive" onClick={handleBulkDelete}>
+            <Trash2 className="h-4 w-4" />
+            Delete {selectedIds.size}
+          </Button>
+        )}
+        <Button variant="outline" onClick={handleDownload} disabled={!forecastsData?.data?.length}>
+          <Download className="h-4 w-4" />
+          Download
+        </Button>
+        <Button onClick={handleAddForecast} disabled={!selectedWeekId}>
+          <Plus className="h-4 w-4" />
+          Add Forecast
+        </Button>
+      </PageHeader>
+
       {/* Filters */}
       {selectedWeekId && (
         <div className="pt-0 pb-6">
@@ -178,29 +199,6 @@ export default function DemandPlanningPage() {
           />
         </div>
       )}
-
-      <div className="mb-6">
-        <PageHeader
-          title="Demand Planning"
-          description={`Forecast ${periodLabel} demand by client and route`}
-        >
-          <WeekSelector value={selectedWeekId} onValueChange={handleWeekChange} />
-          {selectedIds.size > 0 && (
-            <Button variant="destructive" onClick={handleBulkDelete}>
-              <Trash2 className="h-4 w-4" />
-              Delete {selectedIds.size}
-            </Button>
-          )}
-          <Button variant="outline" onClick={handleDownload} disabled={!forecastsData?.data?.length}>
-            <Download className="h-4 w-4" />
-            Download
-          </Button>
-          <Button onClick={handleAddForecast} disabled={!selectedWeekId}>
-            <Plus className="h-4 w-4" />
-            Add Forecast
-          </Button>
-        </PageHeader>
-      </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-6">
