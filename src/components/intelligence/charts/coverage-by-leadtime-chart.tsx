@@ -60,7 +60,7 @@ export function CoverageByLeadTimeChart({
   }
 
   return (
-    <div className="flex flex-col gap-6" style={{ height }}>
+    <div className="flex flex-col gap-6">
       {/* Option: KPI Tiles */}
       <div className="grid grid-cols-3 gap-4">
         {data.buckets.map((bucket) => (
@@ -99,7 +99,7 @@ export function CoverageByLeadTimeChart({
       </div>
 
       {/* Option: Grouped Bar Chart */}
-      <ResponsiveContainer width="100%" height={200}>
+      <ResponsiveContainer width="100%" height={180}>
         <BarChart data={data.buckets} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
           <XAxis
