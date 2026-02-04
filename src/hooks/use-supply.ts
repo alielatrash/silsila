@@ -36,11 +36,35 @@ interface SupplyTarget {
 }
 
 // Supply Targets (aggregated demand by CITYm)
-export function useSupplyTargets(planningWeekId?: string) {
+export interface SupplyFilters {
+  plannerIds?: string[]
+  clientIds?: string[]
+  categoryIds?: string[]
+  truckTypeIds?: string[]
+}
+
+export function useSupplyTargets(planningWeekId?: string, filters?: SupplyFilters) {
   return useQuery({
-    queryKey: ['supplyTargets', planningWeekId],
+    queryKey: ['supplyTargets', planningWeekId, filters],
     queryFn: async (): Promise<{ success: boolean; data: SupplyTarget[] }> => {
-      const response = await fetch(`/api/supply/targets?planningWeekId=${planningWeekId}`, {
+      const params = new URLSearchParams()
+      if (planningWeekId) params.append('planningWeekId', planningWeekId)
+
+      // Add filters
+      if (filters?.plannerIds && filters.plannerIds.length > 0) {
+        filters.plannerIds.forEach(id => params.append('plannerIds', id))
+      }
+      if (filters?.clientIds && filters.clientIds.length > 0) {
+        filters.clientIds.forEach(id => params.append('clientIds', id))
+      }
+      if (filters?.categoryIds && filters.categoryIds.length > 0) {
+        filters.categoryIds.forEach(id => params.append('categoryIds', id))
+      }
+      if (filters?.truckTypeIds && filters.truckTypeIds.length > 0) {
+        filters.truckTypeIds.forEach(id => params.append('truckTypeIds', id))
+      }
+
+      const response = await fetch(`/api/supply/targets?${params.toString()}`, {
         credentials: 'include',
       })
       if (!response.ok) throw new Error('Failed to fetch supply targets')

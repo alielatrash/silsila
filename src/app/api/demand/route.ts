@@ -25,12 +25,28 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1', 10)
     const pageSize = parseInt(searchParams.get('pageSize') || '50', 10)
 
-    console.log('[GET /api/demand] Query params:', { planningWeekId, partyId, routeKey, page, pageSize })
+    // Get filter parameters
+    const plannerIds = searchParams.getAll('plannerIds')
+    const clientIds = searchParams.getAll('clientIds')
+    const categoryIds = searchParams.getAll('categoryIds')
+    const truckTypeIds = searchParams.getAll('truckTypeIds')
+
+    console.log('[GET /api/demand] Query params:', { planningWeekId, partyId, routeKey, page, pageSize, plannerIds, clientIds, categoryIds, truckTypeIds })
 
     const where = orgScopedWhere(session, {
       ...(planningWeekId && { planningWeekId }),
       ...(partyId && { partyId }),
       ...(routeKey && { routeKey }),
+      ...(plannerIds.length > 0 && { createdById: { in: plannerIds } }),
+      ...(clientIds.length > 0 && { partyId: { in: clientIds } }),
+      ...(categoryIds.length > 0 && { demandCategoryId: { in: categoryIds } }),
+      ...(truckTypeIds.length > 0 && {
+        resourceTypes: {
+          some: {
+            resourceTypeId: { in: truckTypeIds }
+          }
+        }
+      }),
     })
 
     console.log('[GET /api/demand] Where clause:', JSON.stringify(where, null, 2))

@@ -54,14 +54,40 @@ export function usePlanningWeeks(count: number = 4) {
 }
 
 // Demand Forecasts
-export function useDemandForecasts(planningWeekId?: string, page: number = 1, pageSize: number = 50) {
+export interface DemandFilters {
+  plannerIds?: string[]
+  clientIds?: string[]
+  categoryIds?: string[]
+  truckTypeIds?: string[]
+}
+
+export function useDemandForecasts(
+  planningWeekId?: string,
+  page: number = 1,
+  pageSize: number = 50,
+  filters?: DemandFilters
+) {
   return useQuery({
-    queryKey: ['demandForecasts', planningWeekId, page, pageSize],
+    queryKey: ['demandForecasts', planningWeekId, page, pageSize, filters],
     queryFn: async (): Promise<DemandForecastsResponse> => {
       const params = new URLSearchParams()
       if (planningWeekId) params.append('planningWeekId', planningWeekId)
       params.append('page', page.toString())
       params.append('pageSize', pageSize.toString())
+
+      // Add filters
+      if (filters?.plannerIds && filters.plannerIds.length > 0) {
+        filters.plannerIds.forEach(id => params.append('plannerIds', id))
+      }
+      if (filters?.clientIds && filters.clientIds.length > 0) {
+        filters.clientIds.forEach(id => params.append('clientIds', id))
+      }
+      if (filters?.categoryIds && filters.categoryIds.length > 0) {
+        filters.categoryIds.forEach(id => params.append('categoryIds', id))
+      }
+      if (filters?.truckTypeIds && filters.truckTypeIds.length > 0) {
+        filters.truckTypeIds.forEach(id => params.append('truckTypeIds', id))
+      }
 
       const response = await fetch(`/api/demand?${params.toString()}`, {
         credentials: 'include',

@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/layout'
 import { WeekSelector } from '@/components/demand/week-selector'
 import { SupplyTable } from '@/components/supply/supply-table'
 import { SupplyFormDialog } from '@/components/supply/supply-form-dialog'
+import { SupplyFiltersComponent, type SupplyFilters } from '@/components/supply/supply-filters'
 import { usePlanningWeeks } from '@/hooks/use-demand'
 import { useSupplyTargets } from '@/hooks/use-supply'
 
@@ -14,9 +15,15 @@ export default function SupplyPlanningPage() {
   const [selectedWeekId, setSelectedWeekId] = useState<string>()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedCitym, setSelectedCitym] = useState<string>('')
+  const [filters, setFilters] = useState<SupplyFilters>({
+    plannerIds: [],
+    clientIds: [],
+    categoryIds: [],
+    truckTypeIds: [],
+  })
 
   const { data: weeksData } = usePlanningWeeks()
-  const { data: targetsData, isLoading } = useSupplyTargets(selectedWeekId)
+  const { data: targetsData, isLoading } = useSupplyTargets(selectedWeekId, filters)
 
   // Auto-select first (current) week
   useEffect(() => {
@@ -24,6 +31,20 @@ export default function SupplyPlanningPage() {
       setSelectedWeekId(weeksData.data[0].id)
     }
   }, [weeksData, selectedWeekId])
+
+  const handleWeekChange = (weekId: string | undefined) => {
+    setSelectedWeekId(weekId)
+    setFilters({
+      plannerIds: [],
+      clientIds: [],
+      categoryIds: [],
+      truckTypeIds: [],
+    })
+  }
+
+  const handleFiltersChange = (newFilters: SupplyFilters) => {
+    setFilters(newFilters)
+  }
 
   const handleAddCommitment = (routeKey: string) => {
     setSelectedCitym(routeKey)
@@ -122,7 +143,7 @@ export default function SupplyPlanningPage() {
         title="Supply Planning"
         description="Manage supplier commitments by route"
       >
-        <WeekSelector value={selectedWeekId} onValueChange={setSelectedWeekId} />
+        <WeekSelector value={selectedWeekId} onValueChange={handleWeekChange} />
         <Button variant="outline" onClick={handleDownload} disabled={!targetsData?.data?.length}>
           <Download className="h-4 w-4" />
           Download
@@ -150,6 +171,17 @@ export default function SupplyPlanningPage() {
           <p className="text-2xl font-bold">{routeCount}</p>
         </div>
       </div>
+
+      {/* Filters */}
+      {selectedWeekId && (
+        <div className="mb-6">
+          <SupplyFiltersComponent
+            planningWeekId={selectedWeekId}
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+          />
+        </div>
+      )}
 
       {selectedWeekId ? (
         <SupplyTable

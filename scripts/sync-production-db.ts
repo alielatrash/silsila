@@ -14,6 +14,24 @@
  */
 
 import { execSync } from 'child_process'
+import * as fs from 'fs'
+import * as path from 'path'
+
+// Load .env file manually
+const envPath = path.join(process.cwd(), '.env')
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8')
+  envContent.split('\n').forEach(line => {
+    const match = line.match(/^([^=:#]+)=(.*)$/)
+    if (match) {
+      const key = match[1].trim()
+      const value = match[2].trim().replace(/^["'](.*)["']$/, '$1')
+      if (!process.env[key]) {
+        process.env[key] = value
+      }
+    }
+  })
+}
 
 console.log('🔄 Syncing production database schema...')
 console.log('')

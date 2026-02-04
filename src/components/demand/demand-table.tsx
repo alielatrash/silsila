@@ -177,6 +177,7 @@ export function DemandTable({ data, isLoading, onEditForecast, weekStart, planni
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-10"></TableHead>
               <TableHead className="font-semibold">Client</TableHead>
+              <TableHead className="font-semibold">Demand Planner</TableHead>
               <TableHead className="font-semibold">Route</TableHead>
               <TableHead className="font-semibold">Region</TableHead>
               {isCategoryEnabled && (
@@ -239,6 +240,7 @@ export function DemandTable({ data, isLoading, onEditForecast, weekStart, planni
               )}
             </TableHead>
             <TableHead className="sticky left-0 bg-card font-semibold">Client</TableHead>
+            <TableHead className="font-semibold">Demand Planner</TableHead>
             <TableHead className="font-semibold">Route</TableHead>
             <TableHead className="font-semibold">Region</TableHead>
             {isCategoryEnabled && (
@@ -288,6 +290,9 @@ export function DemandTable({ data, isLoading, onEditForecast, weekStart, planni
               </TableCell>
               <TableCell className="sticky left-0 bg-inherit font-medium max-w-[200px] truncate">
                 {forecast.party.name}
+              </TableCell>
+              <TableCell className="text-sm text-muted-foreground">
+                {forecast.createdBy.firstName} {forecast.createdBy.lastName}
               </TableCell>
               <TableCell className="whitespace-nowrap text-sm">
                 {formatCitym(forecast.routeKey)}

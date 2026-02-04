@@ -24,12 +24,33 @@ export async function GET(request: Request) {
       )
     }
 
+    // Get filter parameters
+    const plannerIds = searchParams.getAll('plannerIds')
+    const clientIds = searchParams.getAll('clientIds')
+    const categoryIds = searchParams.getAll('categoryIds')
+    const truckTypeIds = searchParams.getAll('truckTypeIds')
+
+    // Build where clause with filters
+    const demandWhereClause = orgScopedWhere(session, {
+      planningWeekId,
+      ...(plannerIds.length > 0 && { createdById: { in: plannerIds } }),
+      ...(clientIds.length > 0 && { partyId: { in: clientIds } }),
+      ...(categoryIds.length > 0 && { demandCategoryId: { in: categoryIds } }),
+      ...(truckTypeIds.length > 0 && {
+        resourceTypes: {
+          some: {
+            resourceTypeId: { in: truckTypeIds }
+          }
+        }
+      }),
+    })
+
     // Run queries in parallel for better performance (with org scoping)
     const [aggregatedDemand, commitments, demandForecasts, forecastResourceTypes] = await Promise.all([
       // Aggregate demand forecasts by routeKey
       prisma.demandForecast.groupBy({
         by: ['routeKey'],
-        where: orgScopedWhere(session, { planningWeekId }),
+        where: demandWhereClause,
         _sum: {
           day1Qty: true,
           day2Qty: true,
@@ -42,7 +63,7 @@ export async function GET(request: Request) {
         },
         _count: { id: true },
       }),
-      // Get all supply commitments for this week
+      // Get all supply commitments for this week (not filtered - show all commitments)
       prisma.supplyCommitment.findMany({
         where: orgScopedWhere(session, { planningWeekId }),
         include: {
@@ -51,7 +72,7 @@ export async function GET(request: Request) {
       }),
       // Get individual demand forecasts with party details for breakdown
       prisma.demandForecast.findMany({
-        where: orgScopedWhere(session, { planningWeekId }),
+        where: demandWhereClause,
         select: {
           id: true,
           routeKey: true,
@@ -72,7 +93,7 @@ export async function GET(request: Request) {
       // Get truck types through junction table
       prisma.demandForecastResourceType.findMany({
         where: {
-          demandForecast: orgScopedWhere(session, { planningWeekId }),
+          demandForecast: demandWhereClause,
         },
         select: {
           demandForecastId: true,

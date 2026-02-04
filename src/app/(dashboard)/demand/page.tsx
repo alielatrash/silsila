@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/layout'
 import { WeekSelector } from '@/components/demand/week-selector'
 import { DemandTable } from '@/components/demand/demand-table'
 import { DemandFormDialog } from '@/components/demand/demand-form-dialog'
+import { DemandFiltersComponent, type DemandFilters } from '@/components/demand/demand-filters'
 import { usePlanningWeeks, useDemandForecasts, useDeleteDemandForecast } from '@/hooks/use-demand'
 import { useOrganizationSettings } from '@/hooks/use-organization'
 import { toast } from 'sonner'
@@ -29,18 +30,36 @@ export default function DemandPlanningPage() {
   const [editingForecast, setEditingForecast] = useState<DemandForecastWithRelations | null>(null)
   const [page, setPage] = useState(1)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [filters, setFilters] = useState<DemandFilters>({
+    plannerIds: [],
+    clientIds: [],
+    categoryIds: [],
+    truckTypeIds: [],
+  })
   const pageSize = 50
 
   const { data: weeksData } = usePlanningWeeks()
-  const { data: forecastsData, isLoading } = useDemandForecasts(selectedWeekId, page, pageSize)
+  const { data: forecastsData, isLoading } = useDemandForecasts(selectedWeekId, page, pageSize, filters)
   const { data: orgSettings } = useOrganizationSettings()
   const deleteMutation = useDeleteDemandForecast()
 
-  // Reset page when week changes
+  // Reset page and filters when week changes
   const handleWeekChange = (weekId: string | undefined) => {
     setSelectedWeekId(weekId)
     setPage(1)
     setSelectedIds(new Set())
+    setFilters({
+      plannerIds: [],
+      clientIds: [],
+      categoryIds: [],
+      truckTypeIds: [],
+    })
+  }
+
+  // Reset page when filters change
+  const handleFiltersChange = (newFilters: DemandFilters) => {
+    setFilters(newFilters)
+    setPage(1)
   }
 
   const handleBulkDelete = async () => {
@@ -65,6 +84,7 @@ export default function DemandPlanningPage() {
 
     const headers = [
       'Client',
+      'Demand Planner',
       'Route',
       'Pickup City',
       'Dropoff City',
@@ -83,6 +103,7 @@ export default function DemandPlanningPage() {
 
     const rows = forecastsData.data.map(f => [
       f.party.name,
+      `${f.createdBy.firstName} ${f.createdBy.lastName}`,
       f.routeKey,
       f.pickupLocation.name,
       f.dropoffLocation.name,
@@ -204,6 +225,15 @@ export default function DemandPlanningPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Filters */}
+      {selectedWeekId && (
+        <DemandFiltersComponent
+          planningWeekId={selectedWeekId}
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+        />
+      )}
 
       {/* Data Table */}
       <Card className="py-0">
