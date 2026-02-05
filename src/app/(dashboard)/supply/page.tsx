@@ -1,23 +1,30 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Download } from 'lucide-react'
+import { Download, Table2, LayoutGrid, Flame } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/layout'
 import { WeekSelector } from '@/components/demand/week-selector'
 import { SupplyTable } from '@/components/supply/supply-table'
+import { SupplyTableEnhanced } from '@/components/supply/supply-table-enhanced'
+import { SupplyHeatmapView } from '@/components/supply/supply-heatmap-view'
 import { SupplyFormDialog } from '@/components/supply/supply-form-dialog'
 import { SupplyFiltersComponent, type SupplyFilters } from '@/components/supply/supply-filters'
 import { usePlanningWeeks } from '@/hooks/use-demand'
 import { useSupplyTargets } from '@/hooks/use-supply'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
+export type ViewMode = 'detailed' | 'compact' | 'heatmap'
 
 export default function SupplyPlanningPage() {
   const [selectedWeekId, setSelectedWeekId] = useState<string>()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedCitym, setSelectedCitym] = useState<string>('')
   const [editingSupplierId, setEditingSupplierId] = useState<string>('')
+  const [viewMode, setViewMode] = useState<ViewMode>('detailed')
   const [filters, setFilters] = useState<SupplyFilters>({
     plannerIds: [],
+    supplyPlannerIds: [],
     clientIds: [],
     categoryIds: [],
     truckTypeIds: [],
@@ -36,13 +43,6 @@ export default function SupplyPlanningPage() {
 
   const handleWeekChange = (weekId: string | undefined) => {
     setSelectedWeekId(weekId)
-    setFilters({
-      plannerIds: [],
-      clientIds: [],
-      categoryIds: [],
-      truckTypeIds: [],
-      cityIds: [],
-    })
   }
 
   const handleFiltersChange = (newFilters: SupplyFilters) => {
@@ -162,12 +162,33 @@ export default function SupplyPlanningPage() {
 
       {/* Filters */}
       {selectedWeekId && (
-        <div className="pt-0 pb-6">
+        <div className="pt-0 pb-6 space-y-4">
           <SupplyFiltersComponent
             planningWeekId={selectedWeekId}
             filters={filters}
             onFiltersChange={handleFiltersChange}
           />
+
+          {/* View Mode Selector */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground">View:</span>
+            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
+              <TabsList>
+                <TabsTrigger value="detailed" className="gap-2">
+                  <Table2 className="h-4 w-4" />
+                  Detailed
+                </TabsTrigger>
+                <TabsTrigger value="compact" className="gap-2">
+                  <LayoutGrid className="h-4 w-4" />
+                  Compact
+                </TabsTrigger>
+                <TabsTrigger value="heatmap" className="gap-2">
+                  <Flame className="h-4 w-4" />
+                  Heatmap
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
       )}
 
@@ -194,14 +215,38 @@ export default function SupplyPlanningPage() {
       </div>
 
       {selectedWeekId ? (
-        <SupplyTable
-          data={targetsData?.data}
-          isLoading={isLoading}
-          onAddCommitment={handleAddCommitment}
-          onEditCommitment={handleEditCommitment}
-          planningWeekId={selectedWeekId}
-          weekStart={weeksData?.data?.find(w => w.id === selectedWeekId)?.weekStart}
-        />
+        <>
+          {viewMode === 'detailed' && (
+            <SupplyTable
+              data={targetsData?.data}
+              isLoading={isLoading}
+              onAddCommitment={handleAddCommitment}
+              onEditCommitment={handleEditCommitment}
+              planningWeekId={selectedWeekId}
+              weekStart={weeksData?.data?.find(w => w.id === selectedWeekId)?.weekStart}
+            />
+          )}
+          {viewMode === 'compact' && (
+            <SupplyTableEnhanced
+              data={targetsData?.data}
+              isLoading={isLoading}
+              onAddCommitment={handleAddCommitment}
+              onEditCommitment={handleEditCommitment}
+              planningWeekId={selectedWeekId}
+              weekStart={weeksData?.data?.find(w => w.id === selectedWeekId)?.weekStart}
+            />
+          )}
+          {viewMode === 'heatmap' && (
+            <SupplyHeatmapView
+              data={targetsData?.data}
+              isLoading={isLoading}
+              onAddCommitment={handleAddCommitment}
+              onEditCommitment={handleEditCommitment}
+              planningWeekId={selectedWeekId}
+              weekStart={weeksData?.data?.find(w => w.id === selectedWeekId)?.weekStart}
+            />
+          )}
+        </>
       ) : (
         <div className="rounded-md border p-8 text-center">
           <p className="text-muted-foreground">Select a planning week to view supply targets</p>

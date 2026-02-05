@@ -39,6 +39,7 @@ interface SupplyTarget {
 // Supply Targets (aggregated demand by CITYm)
 export interface SupplyFilters {
   plannerIds?: string[]
+  supplyPlannerIds?: string[]
   clientIds?: string[]
   categoryIds?: string[]
   truckTypeIds?: string[]
@@ -55,6 +56,9 @@ export function useSupplyTargets(planningWeekId?: string, filters?: SupplyFilter
       // Add filters
       if (filters?.plannerIds && filters.plannerIds.length > 0) {
         filters.plannerIds.forEach(id => params.append('plannerIds', id))
+      }
+      if (filters?.supplyPlannerIds && filters.supplyPlannerIds.length > 0) {
+        filters.supplyPlannerIds.forEach(id => params.append('supplyPlannerIds', id))
       }
       if (filters?.clientIds && filters.clientIds.length > 0) {
         filters.clientIds.forEach(id => params.append('clientIds', id))
@@ -238,14 +242,18 @@ export function useUpdateSupplyCommitment() {
 export function useDeleteSupplyCommitment() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/supply/${id}`, { method: 'DELETE', credentials: 'include' })
+    mutationFn: async ({ id, deleteAll = false }: { id: string; deleteAll?: boolean }) => {
+      const url = deleteAll ? `/api/supply/${id}?deleteAll=true` : `/api/supply/${id}`
+      const response = await fetch(url, { method: 'DELETE', credentials: 'include' })
       const result = await response.json()
       if (!result.success) throw new Error(result.error.message)
       return result.data
     },
-    // Optimistic update: remove commitment from cache immediately
-    onMutate: async (id: string) => {
+    // Optimistic update: remove commitment from cache immediately (only for single delete)
+    onMutate: async ({ id, deleteAll }) => {
+      // Skip optimistic update for deleteAll as it's more complex
+      if (deleteAll) return null
+
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['supplyTargets'] })
 

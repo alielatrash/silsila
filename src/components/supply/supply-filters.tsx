@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query'
 
 export interface SupplyFilters {
   plannerIds: string[]
+  supplyPlannerIds: string[]
   clientIds: string[]
   categoryIds: string[]
   truckTypeIds: string[]
@@ -42,10 +43,28 @@ export function SupplyFiltersComponent({ planningWeekId, filters, onFiltersChang
     enabled: !!planningWeekId,
   })
 
+  // Fetch unique supply planners from the supply commitments for this planning week
+  const { data: supplyPlannersData } = useQuery({
+    queryKey: ['supply-planners', planningWeekId],
+    queryFn: async () => {
+      if (!planningWeekId) return []
+      const res = await fetch(`/api/supply/planners?planningWeekId=${planningWeekId}`)
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error?.message || 'Failed to load planners')
+      return json.data as Array<{ id: string; firstName: string; lastName: string }>
+    },
+    enabled: !!planningWeekId,
+  })
+
   const isCategoryEnabled = orgSettings?.demandCategoryEnabled || false
   const categoryLabel = orgSettings?.demandCategoryLabel || 'Category'
 
   const plannerOptions: MultiSelectOption[] = plannersData?.map(p => ({
+    value: p.id,
+    label: `${p.firstName} ${p.lastName}`,
+  })) || []
+
+  const supplyPlannerOptions: MultiSelectOption[] = supplyPlannersData?.map(p => ({
     value: p.id,
     label: `${p.firstName} ${p.lastName}`,
   })) || []
@@ -72,6 +91,7 @@ export function SupplyFiltersComponent({ planningWeekId, filters, onFiltersChang
 
   const hasActiveFilters =
     filters.plannerIds.length > 0 ||
+    filters.supplyPlannerIds.length > 0 ||
     filters.clientIds.length > 0 ||
     filters.categoryIds.length > 0 ||
     filters.truckTypeIds.length > 0 ||
@@ -80,6 +100,7 @@ export function SupplyFiltersComponent({ planningWeekId, filters, onFiltersChang
   const clearFilters = () => {
     onFiltersChange({
       plannerIds: [],
+      supplyPlannerIds: [],
       clientIds: [],
       categoryIds: [],
       truckTypeIds: [],
@@ -103,6 +124,17 @@ export function SupplyFiltersComponent({ planningWeekId, filters, onFiltersChang
                 value={filters.plannerIds}
                 onValueChange={(value) => onFiltersChange({ ...filters, plannerIds: value })}
                 placeholder="Demand Planner"
+                searchPlaceholder="Search planners..."
+                emptyText="No planners found"
+              />
+            </div>
+
+            <div className="min-w-[200px]">
+              <MultiSelectCombobox
+                options={supplyPlannerOptions}
+                value={filters.supplyPlannerIds}
+                onValueChange={(value) => onFiltersChange({ ...filters, supplyPlannerIds: value })}
+                placeholder="Supply Planner"
                 searchPlaceholder="Search planners..."
                 emptyText="No planners found"
               />

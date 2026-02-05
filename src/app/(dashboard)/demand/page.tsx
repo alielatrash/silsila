@@ -43,17 +43,11 @@ export default function DemandPlanningPage() {
   const { data: orgSettings } = useOrganizationSettings()
   const deleteMutation = useDeleteDemandForecast()
 
-  // Reset page and filters when week changes
+  // Reset page when week changes (keep filters)
   const handleWeekChange = (weekId: string | undefined) => {
     setSelectedWeekId(weekId)
     setPage(1)
     setSelectedIds(new Set())
-    setFilters({
-      plannerIds: [],
-      clientIds: [],
-      categoryIds: [],
-      truckTypeIds: [],
-    })
   }
 
   // Reset page when filters change

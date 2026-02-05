@@ -255,6 +255,9 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     }
 
     const { id } = await params
+    const { searchParams } = new URL(request.url)
+    const deleteAll = searchParams.get('deleteAll') === 'true'
+
     const existing = await prisma.demandForecast.findUnique({
       where: { id },
       include: {
@@ -280,29 +283,93 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       )
     }
 
-    // Delete the forecast
-    await prisma.demandForecast.delete({ where: { id } })
-
-    // Check if there are any remaining forecasts for this route (routeKey) in this planning week
-    const remainingForecasts = await prisma.demandForecast.count({
-      where: {
-        organizationId: session.user.currentOrgId,
-        planningWeekId: existing.planningWeekId,
-        routeKey: existing.routeKey,
-      },
-    })
-
-    // If no forecasts remain for this route, cascade delete related supply commitments
+    let deletedCount = 0
     let suppliesDeleted = 0
-    if (remainingForecasts === 0) {
-      const result = await prisma.supplyCommitment.deleteMany({
+    const affectedRouteKeys = new Set<string>()
+    const affectedWeekIds = new Set<string>()
+
+    if (deleteAll) {
+      // Find all matching forecasts across all weeks
+      const matchingForecasts = await prisma.demandForecast.findMany({
+        where: {
+          organizationId: session.user.currentOrgId,
+          partyId: existing.partyId,
+          pickupLocationId: existing.pickupLocationId,
+          dropoffLocationId: existing.dropoffLocationId,
+          demandCategoryId: existing.demandCategoryId,
+        },
+        select: {
+          id: true,
+          routeKey: true,
+          planningWeekId: true,
+        },
+      })
+
+      // Track affected routes and weeks
+      matchingForecasts.forEach(f => {
+        affectedRouteKeys.add(f.routeKey)
+        affectedWeekIds.add(f.planningWeekId)
+      })
+
+      // Delete all matching forecasts
+      const result = await prisma.demandForecast.deleteMany({
+        where: {
+          id: { in: matchingForecasts.map(f => f.id) },
+        },
+      })
+      deletedCount = result.count
+
+      // For each affected week/route combination, check if we should delete supply commitments
+      for (const weekId of affectedWeekIds) {
+        for (const routeKey of affectedRouteKeys) {
+          const remainingForecasts = await prisma.demandForecast.count({
+            where: {
+              organizationId: session.user.currentOrgId,
+              planningWeekId: weekId,
+              routeKey: routeKey,
+            },
+          })
+
+          // If no forecasts remain for this route in this week, cascade delete supply commitments
+          if (remainingForecasts === 0) {
+            const supplyResult = await prisma.supplyCommitment.deleteMany({
+              where: {
+                organizationId: session.user.currentOrgId,
+                planningWeekId: weekId,
+                routeKey: routeKey,
+              },
+            })
+            suppliesDeleted += supplyResult.count
+          }
+        }
+      }
+    } else {
+      // Delete only the specified forecast
+      await prisma.demandForecast.delete({ where: { id } })
+      deletedCount = 1
+      affectedRouteKeys.add(existing.routeKey)
+      affectedWeekIds.add(existing.planningWeekId)
+
+      // Check if there are any remaining forecasts for this route in this planning week
+      const remainingForecasts = await prisma.demandForecast.count({
         where: {
           organizationId: session.user.currentOrgId,
           planningWeekId: existing.planningWeekId,
           routeKey: existing.routeKey,
         },
       })
-      suppliesDeleted = result.count
+
+      // If no forecasts remain for this route, cascade delete related supply commitments
+      if (remainingForecasts === 0) {
+        const result = await prisma.supplyCommitment.deleteMany({
+          where: {
+            organizationId: session.user.currentOrgId,
+            planningWeekId: existing.planningWeekId,
+            routeKey: existing.routeKey,
+          },
+        })
+        suppliesDeleted = result.count
+      }
     }
 
     // Create audit log asynchronously (don't block the response)
@@ -315,12 +382,21 @@ export async function DELETE(request: Request, { params }: RouteParams) {
         routeKey: existing.routeKey,
         partyId: existing.partyId,
         clientName: existing.party?.name,
+        deleteAll,
+        deletedCount,
         cascadedSupplyDelete: suppliesDeleted > 0,
         suppliesDeletedCount: suppliesDeleted
       },
     }).catch((err) => console.error('Failed to create audit log:', err))
 
-    return NextResponse.json({ success: true, data: { message: 'Forecast deleted' } })
+    return NextResponse.json({
+      success: true,
+      data: {
+        message: deleteAll ? `${deletedCount} forecast(s) deleted` : 'Forecast deleted',
+        deletedCount,
+        suppliesDeletedCount: suppliesDeleted
+      }
+    })
   } catch (error) {
     console.error('Delete demand forecast error:', error)
     return NextResponse.json(

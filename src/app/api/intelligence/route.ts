@@ -35,6 +35,7 @@ export async function GET(request: Request) {
 
     // Get filter parameters
     const plannerIds = searchParams.getAll('plannerIds')
+    const supplyPlannerIds = searchParams.getAll('supplyPlannerIds')
     const clientIds = searchParams.getAll('clientIds')
     const categoryIds = searchParams.getAll('categoryIds')
     const truckTypeIds = searchParams.getAll('truckTypeIds')
@@ -56,9 +57,10 @@ export async function GET(request: Request) {
       ...(routeKeys.length > 0 && { routeKey: { in: routeKeys } }),
     })
 
-    // Build where clause for supply commitments (filter by route if specified)
+    // Build where clause for supply commitments (filter by route and supply planner if specified)
     const commitmentWhereClause = orgScopedWhere(session, {
       planningWeekId,
+      ...(supplyPlannerIds.length > 0 && { createdById: { in: supplyPlannerIds } }),
       ...(routeKeys.length > 0 && { routeKey: { in: routeKeys } }),
     })
 

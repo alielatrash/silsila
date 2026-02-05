@@ -22,6 +22,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useUpdateDemandForecast, useDeleteDemandForecast, usePlanningWeeks } from '@/hooks/use-demand'
@@ -85,6 +93,7 @@ export function DemandTable({ data, isLoading, onEditForecast, weekStart, planni
   const deleteMutation = useDeleteDemandForecast()
   const [editingCell, setEditingCell] = useState<{ id: string; day: string } | null>(null)
   const [editValue, setEditValue] = useState<string>('')
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; forecastId: string; clientName: string; routeKey: string } | null>(null)
 
   const planningCycle = planningWeeksData?.meta?.planningCycle || 'WEEKLY'
   const isMonthlyPlanning = planningCycle === 'MONTHLY'
@@ -158,13 +167,24 @@ export function DemandTable({ data, isLoading, onEditForecast, weekStart, planni
     }
   }
 
-  const handleDelete = async (id: string, routeKey: string) => {
-    if (!confirm(`Are you sure you want to delete the forecast for ${formatCitym(routeKey)}?`)) return
+  const handleDelete = (id: string, clientName: string, routeKey: string) => {
+    setDeleteDialog({ open: true, forecastId: id, clientName, routeKey })
+  }
+
+  const handleConfirmDelete = async (deleteAll: boolean) => {
+    if (!deleteDialog) return
+
     try {
-      await deleteMutation.mutateAsync(id)
-      toast.success('Forecast deleted successfully')
+      await deleteMutation.mutateAsync({ id: deleteDialog.forecastId, deleteAll })
+      if (deleteAll) {
+        toast.success('Forecast deleted for all weeks')
+      } else {
+        toast.success('Forecast deleted')
+      }
     } catch (error) {
       toast.error('Failed to delete forecast')
+    } finally {
+      setDeleteDialog(null)
     }
   }
 
@@ -396,7 +416,7 @@ export function DemandTable({ data, isLoading, onEditForecast, weekStart, planni
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onClick={() => handleDelete(forecast.id, forecast.routeKey)}
+                      onClick={() => handleDelete(forecast.id, forecast.party.name, forecast.routeKey)}
                       className="text-destructive"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
@@ -465,6 +485,34 @@ export function DemandTable({ data, isLoading, onEditForecast, weekStart, planni
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialog?.open || false} onOpenChange={(open) => !open && setDeleteDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Demand Forecast</DialogTitle>
+            <DialogDescription>
+              Delete forecast for <strong>{deleteDialog?.clientName}</strong> on route <strong>{deleteDialog?.routeKey && formatCitym(deleteDialog.routeKey)}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Would you like to delete this forecast for the current week only, or for all weeks in this planning cycle?
+            </p>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setDeleteDialog(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={() => handleConfirmDelete(false)}>
+              Delete Current Week Only
+            </Button>
+            <Button variant="destructive" onClick={() => handleConfirmDelete(true)}>
+              Delete All Weeks
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

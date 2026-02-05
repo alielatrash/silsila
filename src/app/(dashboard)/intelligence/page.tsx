@@ -21,6 +21,7 @@ export default function IntelligencePage() {
   const [selectedWeekId, setSelectedWeekId] = useState<string>()
   const [filters, setFilters] = useState<IntelligenceFilters>({
     plannerIds: [],
+    supplyPlannerIds: [],
     clientIds: [],
     categoryIds: [],
     truckTypeIds: [],
@@ -42,6 +43,7 @@ export default function IntelligencePage() {
     // Reset filters when week changes
     setFilters({
       plannerIds: [],
+      supplyPlannerIds: [],
       clientIds: [],
       categoryIds: [],
       truckTypeIds: [],

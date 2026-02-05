@@ -236,8 +236,9 @@ export function useUpdateDemandForecast() {
 export function useDeleteDemandForecast() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/demand/${id}`, { method: 'DELETE', credentials: 'include' })
+    mutationFn: async ({ id, deleteAll = false }: { id: string; deleteAll?: boolean }) => {
+      const url = deleteAll ? `/api/demand/${id}?deleteAll=true` : `/api/demand/${id}`
+      const response = await fetch(url, { method: 'DELETE', credentials: 'include' })
       const result = await response.json()
       if (!result.success) throw new Error(result.error.message)
       return result.data

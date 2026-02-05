@@ -16,6 +16,14 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useUpdateSupplyCommitment, useDeleteSupplyCommitment } from '@/hooks/use-supply'
 import { usePlanningWeeks } from '@/hooks/use-demand'
 import { WEEK_DAYS } from '@/types'
@@ -77,6 +85,7 @@ export function SupplyTable({ data, isLoading, onAddCommitment, onEditCommitment
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
   const [editingCell, setEditingCell] = useState<{ id: string; day: string } | null>(null)
   const [editValue, setEditValue] = useState<string>('')
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; commitmentId: string; supplierName: string; routeKey: string } | null>(null)
   const updateMutation = useUpdateSupplyCommitment()
   const deleteMutation = useDeleteSupplyCommitment()
 
@@ -223,13 +232,24 @@ export function SupplyTable({ data, isLoading, onAddCommitment, onEditCommitment
     }
   }
 
-  const handleDeleteCommitment = async (id: string, supplierName: string) => {
-    if (!confirm(`Are you sure you want to delete the commitment from ${supplierName}?`)) return
+  const handleDeleteCommitment = (id: string, supplierName: string, routeKey: string) => {
+    setDeleteDialog({ open: true, commitmentId: id, supplierName, routeKey })
+  }
+
+  const handleConfirmDelete = async (deleteAll: boolean) => {
+    if (!deleteDialog) return
+
     try {
-      await deleteMutation.mutateAsync(id)
-      toast.success('Commitment deleted successfully')
+      await deleteMutation.mutateAsync({ id: deleteDialog.commitmentId, deleteAll })
+      if (deleteAll) {
+        toast.success('Commitment deleted for all weeks')
+      } else {
+        toast.success('Commitment deleted')
+      }
     } catch (error) {
       toast.error('Failed to delete commitment')
+    } finally {
+      setDeleteDialog(null)
     }
   }
 
@@ -400,44 +420,48 @@ export function SupplyTable({ data, isLoading, onAddCommitment, onEditCommitment
 
             // Add city header row with daily totals
             cityRows.push(
-              <TableRow key={`city-header-${originCity}`} className="bg-muted/50 border-t-2 border-border hover:bg-muted/60 cursor-pointer" onClick={() => toggleCity(originCity)}>
-                <TableCell className="py-2 px-2">
+              <TableRow key={`city-header-${originCity}`} className="bg-slate-50/80 border-t-2 border-slate-200 hover:bg-slate-100/80 cursor-pointer" onClick={() => toggleCity(originCity)}>
+                <TableCell className="py-1.5 px-2">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                    className="h-5 w-5 hover:bg-slate-200/50 text-slate-600"
                   >
                     {isCityCollapsed ? (
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronRight className="h-3.5 w-3.5" />
                     ) : (
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDown className="h-3.5 w-3.5" />
                     )}
                   </Button>
                 </TableCell>
-                <TableCell className="sticky left-0 bg-muted/50 py-2 px-4">
-                  <span className="text-sm font-bold text-foreground uppercase tracking-wide">
+                <TableCell className="sticky left-0 bg-slate-50/80 py-1.5 px-4">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">
                     {originCity}
                   </span>
-                  <span className="text-xs text-muted-foreground ml-2">
+                  <span className="text-[10px] text-slate-500 ml-2">
                     ({cityTargets.length} route{cityTargets.length !== 1 ? 's' : ''})
                   </span>
                 </TableCell>
-                <TableCell></TableCell>
-                <TableCell></TableCell>
-                <TableCell></TableCell>
-                <TableCell></TableCell>
+                <TableCell className="py-1.5"></TableCell>
+                <TableCell className="py-1.5"></TableCell>
+                <TableCell className="py-1.5"></TableCell>
+                <TableCell className="py-1.5"></TableCell>
                 {WEEK_DAYS.map((day, index) => {
                   const key = `day${index + 1}` as 'day1' | 'day2' | 'day3' | 'day4' | 'day5' | 'day6' | 'day7'
+                  const value = cityTotals.target[key]
                   return (
-                    <TableCell key={day.key} className="text-center text-xs font-semibold text-muted-foreground">
-                      {cityTotals.target[key]}
+                    <TableCell key={day.key} className={cn(
+                      "text-center text-[10px] font-semibold py-1.5",
+                      value === 0 ? "text-slate-300" : "text-slate-600"
+                    )}>
+                      {value === 0 ? '—' : value}
                     </TableCell>
                   )
                 })}
-                <TableCell className="text-center text-xs font-semibold text-muted-foreground">
+                <TableCell className="text-center text-xs font-semibold text-slate-700 py-1.5">
                   {cityTotals.target.total}
                 </TableCell>
-                <TableCell></TableCell>
+                <TableCell className="py-1.5"></TableCell>
               </TableRow>
             )
 
@@ -455,12 +479,12 @@ export function SupplyTable({ data, isLoading, onAddCommitment, onEditCommitment
 
             // Target Row
             rows.push(
-              <TableRow key={`${target.routeKey}-target`} className="bg-transparent hover:bg-muted/30">
-                <TableCell>
+              <TableRow key={`${target.routeKey}-target`} className="border-t-2 border-border/60 hover:bg-muted/20">
+                <TableCell className="py-2">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                    className="h-6 w-6 hover:bg-muted text-muted-foreground"
                     onClick={() => toggleRow(target.routeKey)}
                   >
                     {isExpanded ? (
@@ -470,85 +494,94 @@ export function SupplyTable({ data, isLoading, onAddCommitment, onEditCommitment
                     )}
                   </Button>
                 </TableCell>
-                <TableCell className="sticky left-0 bg-white font-medium w-56 max-w-[200px] truncate">
+                <TableCell className="sticky left-0 bg-white font-medium w-56 max-w-[200px] truncate py-2">
                   {formatCitym(target.routeKey)}
                 </TableCell>
-                <TableCell className="w-32">
+                <TableCell className="w-32 py-2">
                   <div className="flex flex-wrap gap-1">
                     {target.truckTypes && target.truckTypes.length > 0 ? (
                       target.truckTypes.map(tt => (
-                        <Badge key={tt.id} variant="secondary" className="text-xs">
+                        <Badge key={tt.id} variant="outline" className="text-[10px] py-0 px-1.5 font-normal">
                           {tt.name}
                         </Badge>
                       ))
                     ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
+                      <span className="text-xs text-muted-foreground/50">—</span>
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="text-center">
+                <TableCell className="text-center py-2">
+                  <Badge
+                    variant={target.capacityPercent >= 100 ? "default" : "destructive"}
+                    className={cn(
+                      "text-[10px] px-2 py-0.5 font-medium",
+                      target.capacityPercent >= 100 ? "bg-green-600" : "bg-red-600"
+                    )}
+                  >
+                    {target.capacityPercent >= 100 ? "FILLED" : "AT RISK"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-center py-2">
                   <span className={cn(
-                    "inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap min-w-[130px]",
-                    target.capacityPercent >= 100 && "bg-emerald-100 text-emerald-600",
-                    target.capacityPercent < 100 && "bg-red-100 text-red-600"
+                    "text-xs font-semibold",
+                    target.capacityPercent >= 100 ? "text-green-600" : "text-red-600"
                   )}>
-                    {target.capacityPercent >= 100 && "CAPACITY FILLED"}
-                    {target.capacityPercent < 100 && "FILL RISK"}
+                    {target.capacityPercent >= 100 ? '+' : ''}{target.capacityPercent - 100}%
                   </span>
                 </TableCell>
-                <TableCell className="text-center">
-                  <span className={cn(
-                    "text-sm font-semibold",
-                    target.capacityPercent >= 100 && "text-emerald-600",
-                    target.capacityPercent < 100 && "text-red-600"
-                  )}>
-                    {target.capacityPercent >= 100 ? '+' : '-'}{Math.abs(target.capacityPercent - 100)}%
-                  </span>
-                </TableCell>
-                <TableCell className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Target</TableCell>
+                <TableCell className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/60 py-2">Target</TableCell>
                 {WEEK_DAYS.map((day, index) => {
                   const key = `day${index + 1}` as keyof typeof target.target
+                  const value = target.target[key]
                   return (
-                    <TableCell key={day.key} className="text-center font-medium">
-                      {target.target[key]}
+                    <TableCell key={day.key} className={cn(
+                      "text-center py-2",
+                      value === 0 ? "text-muted-foreground/30" : "text-foreground font-medium"
+                    )}>
+                      {value === 0 ? '—' : value}
                     </TableCell>
                   )
                 })}
-                <TableCell className="text-center font-semibold">
+                <TableCell className="text-center font-semibold text-blue-600 py-2">
                   {target.target.total}
                 </TableCell>
-                <TableCell></TableCell>
+                <TableCell className="py-2"></TableCell>
               </TableRow>
             )
 
             // Committed Row
             rows.push(
-              <TableRow key={`${target.routeKey}-committed`} className="bg-transparent hover:bg-muted/30">
-                <TableCell></TableCell>
-                <TableCell className="sticky left-0 bg-white"></TableCell>
-                <TableCell></TableCell>
-                <TableCell></TableCell>
-                <TableCell></TableCell>
-                <TableCell className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Committed</TableCell>
+              <TableRow key={`${target.routeKey}-committed`} className="hover:bg-muted/20 border-b border-border/30">
+                <TableCell className="py-1.5"></TableCell>
+                <TableCell className="sticky left-0 bg-white py-1.5"></TableCell>
+                <TableCell className="py-1.5"></TableCell>
+                <TableCell className="py-1.5"></TableCell>
+                <TableCell className="py-1.5"></TableCell>
+                <TableCell className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/60 py-1.5">Committed</TableCell>
                 {WEEK_DAYS.map((day, index) => {
                   const key = `day${index + 1}` as keyof typeof target.committed
+                  const value = target.committed[key]
                   return (
-                    <TableCell key={day.key} className="text-center font-medium text-emerald-700 dark:text-emerald-500">
-                      {target.committed[key]}
+                    <TableCell key={day.key} className={cn(
+                      "text-center py-1.5",
+                      value === 0 ? "text-muted-foreground/30" : "text-green-700 font-medium"
+                    )}>
+                      {value === 0 ? '—' : value}
                     </TableCell>
                   )
                 })}
-                <TableCell className="text-center font-semibold text-emerald-700 dark:text-emerald-500">
+                <TableCell className="text-center font-semibold text-green-700 py-1.5">
                   {target.committed.total}
                 </TableCell>
-                <TableCell>
+                <TableCell className="py-1.5">
                   <Button
                     size="sm"
-                    className="h-7 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    variant="outline"
+                    className="h-6 gap-1 text-[11px] px-2"
                     onClick={() => onAddCommitment(target.routeKey)}
                   >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span className="text-xs font-semibold">Add</span>
+                    <Plus className="h-3 w-3" />
+                    Add
                   </Button>
                 </TableCell>
               </TableRow>
@@ -557,16 +590,16 @@ export function SupplyTable({ data, isLoading, onAddCommitment, onEditCommitment
             // Gap Row
             rows.push(
               <TableRow key={`${target.routeKey}-gap`} className={cn(
-                "bg-transparent hover:bg-muted/30",
+                "hover:bg-muted/20",
                 // Add border if not expanded
-                !isExpanded && "border-b-[3px] border-border"
+                !isExpanded && "border-b-2 border-border/40"
               )}>
-                <TableCell></TableCell>
-                <TableCell className="sticky left-0 bg-white"></TableCell>
-                <TableCell></TableCell>
-                <TableCell></TableCell>
-                <TableCell></TableCell>
-                <TableCell className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Gap</TableCell>
+                <TableCell className="py-1.5"></TableCell>
+                <TableCell className="sticky left-0 bg-white py-1.5"></TableCell>
+                <TableCell className="py-1.5"></TableCell>
+                <TableCell className="py-1.5"></TableCell>
+                <TableCell className="py-1.5"></TableCell>
+                <TableCell className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/60 py-1.5">Gap</TableCell>
                 {WEEK_DAYS.map((day, index) => {
                   const key = `day${index + 1}` as keyof typeof target.gap
                   const value = target.gap[key]
@@ -576,27 +609,27 @@ export function SupplyTable({ data, isLoading, onAddCommitment, onEditCommitment
                     <TableCell
                       key={day.key}
                       className={cn(
-                        'text-center font-medium',
-                        displayValue > 0 && 'text-emerald-600 dark:text-emerald-500',
-                        displayValue < 0 && 'text-red-600 dark:text-red-400',
-                        displayValue === 0 && 'text-muted-foreground'
+                        'text-center py-1.5 text-xs',
+                        displayValue > 0 && 'text-green-600 font-medium',
+                        displayValue < 0 && 'text-red-600 font-medium',
+                        displayValue === 0 && 'text-muted-foreground/30'
                       )}
                     >
-                      {displayValue > 0 ? '+' : ''}{displayValue}
+                      {displayValue === 0 ? '—' : (displayValue > 0 ? '+' : '')}{displayValue === 0 ? '' : displayValue}
                     </TableCell>
                   )
                 })}
                 <TableCell
                   className={cn(
-                    'text-center bg-muted/30 font-semibold',
-                    -target.gap.total > 0 && 'text-emerald-600 dark:text-emerald-500',
-                    -target.gap.total < 0 && 'text-red-600 dark:text-red-400',
+                    'text-center py-1.5 text-sm font-semibold',
+                    -target.gap.total > 0 && 'text-green-600',
+                    -target.gap.total < 0 && 'text-red-600',
                     target.gap.total === 0 && 'text-muted-foreground'
                   )}
                 >
                   {-target.gap.total > 0 ? '+' : ''}{-target.gap.total}
                 </TableCell>
-                <TableCell></TableCell>
+                <TableCell className="py-1.5"></TableCell>
               </TableRow>
             )
 
@@ -604,10 +637,10 @@ export function SupplyTable({ data, isLoading, onAddCommitment, onEditCommitment
             if (isExpanded && target.clients?.length > 0) {
               // Client header row
               rows.push(
-                <TableRow key={`${target.routeKey}-clients-header`} className="bg-muted/15 border-t border-border/50">
-                  <TableCell></TableCell>
-                  <TableCell colSpan={12} className="py-1.5 px-2">
-                    <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                <TableRow key={`${target.routeKey}-clients-header`} className="bg-blue-50/30 border-t border-blue-200/30">
+                  <TableCell className="py-1"></TableCell>
+                  <TableCell colSpan={12} className="py-1 px-2">
+                    <div className="text-[10px] font-semibold text-blue-700 uppercase tracking-wide">
                       Target Breakdown by Client
                     </div>
                   </TableCell>
@@ -621,29 +654,33 @@ export function SupplyTable({ data, isLoading, onAddCommitment, onEditCommitment
 
                 rows.push(
                   <TableRow key={`${target.routeKey}-client-${idx}`} className={cn(
-                    "bg-muted/10 hover:bg-muted/20",
-                    shouldShowBorder && "border-b-[3px] border-border"
+                    "bg-blue-50/10 hover:bg-blue-50/20 border-b border-border/20",
+                    shouldShowBorder && "border-b-2 border-border/40"
                   )}>
-                    <TableCell></TableCell>
-                    <TableCell className="sticky left-0 bg-muted/10 pl-8 text-sm">
+                    <TableCell className="py-1"></TableCell>
+                    <TableCell className="sticky left-0 bg-blue-50/10 pl-8 text-xs py-1">
                       {clientData.client.name}
                     </TableCell>
-                    <TableCell></TableCell>
-                    <TableCell></TableCell>
-                    <TableCell></TableCell>
+                    <TableCell className="py-1"></TableCell>
+                    <TableCell className="py-1"></TableCell>
+                    <TableCell className="py-1"></TableCell>
+                    <TableCell className="py-1"></TableCell>
                     {WEEK_DAYS.map((day, index) => {
                       const dayKey = `day${index + 1}` as keyof typeof clientData
                       const value = clientData[dayKey] as number
                       return (
-                        <TableCell key={day.key} className="text-center text-sm">
-                          {value}
+                        <TableCell key={day.key} className={cn(
+                          "text-center text-xs py-1",
+                          value === 0 && "text-muted-foreground/30"
+                        )}>
+                          {value === 0 ? '—' : value}
                         </TableCell>
                       )
                     })}
-                    <TableCell className="text-center text-sm font-medium">
+                    <TableCell className="text-center text-xs font-medium text-blue-600 py-1">
                       {clientData.total}
                     </TableCell>
-                    <TableCell></TableCell>
+                    <TableCell className="py-1"></TableCell>
                   </TableRow>
                 )
               })
@@ -653,10 +690,10 @@ export function SupplyTable({ data, isLoading, onAddCommitment, onEditCommitment
             if (isExpanded && target.commitments?.length > 0) {
               // Commitments header row
               rows.push(
-                <TableRow key={`${target.routeKey}-commitments-header`} className="bg-emerald-50/50 border-t border-emerald-200/50">
-                  <TableCell></TableCell>
-                  <TableCell colSpan={12} className="py-1.5 px-2">
-                    <div className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide">
+                <TableRow key={`${target.routeKey}-commitments-header`} className="bg-green-50/30 border-t border-green-200/30">
+                  <TableCell className="py-1"></TableCell>
+                  <TableCell colSpan={12} className="py-1 px-2">
+                    <div className="text-[10px] font-semibold text-green-700 uppercase tracking-wide">
                       Supplier Commitments
                     </div>
                   </TableCell>
@@ -669,94 +706,90 @@ export function SupplyTable({ data, isLoading, onAddCommitment, onEditCommitment
                   <TableRow
                     key={commitment.id}
                     className={cn(
-                      "bg-emerald-50/20 hover:bg-emerald-50/40",
+                      "bg-green-50/10 hover:bg-green-50/20 border-b border-border/20",
                       // Add clear separator to last commitment row
-                      idx === target.commitments.length - 1 && "border-b-[3px] border-border"
+                      idx === target.commitments.length - 1 && "border-b-2 border-border/40"
                     )}
                   >
-                    <TableCell></TableCell>
-                    <TableCell className="sticky left-0 bg-emerald-50/20 pl-8 text-sm">
+                    <TableCell className="py-1"></TableCell>
+                    <TableCell className="sticky left-0 bg-green-50/10 pl-8 text-xs py-1">
                       {commitment.party.name}
                     </TableCell>
-                    <TableCell></TableCell>
-                    <TableCell></TableCell>
-                    <TableCell></TableCell>
+                    <TableCell className="py-1"></TableCell>
+                    <TableCell className="py-1"></TableCell>
+                    <TableCell className="py-1"></TableCell>
+                    <TableCell className="py-1"></TableCell>
                     {WEEK_DAYS.map((day, index) => {
                       const dayKey = `day${index + 1}Committed` as keyof typeof commitment
                       const value = commitment[dayKey] as number
                       const isEditing = editingCell?.id === commitment.id && editingCell?.day === dayKey
 
                       return (
-                        <TableCell key={day.key} className="text-center p-1">
+                        <TableCell key={day.key} className="text-center p-0.5">
                           {isEditing ? (
-                            <div className="flex items-center gap-1 justify-center">
+                            <div className="flex items-center gap-0.5 justify-center">
                               <Input
                                 type="number"
                                 min="0"
                                 value={editValue}
                                 onChange={(e) => setEditValue(e.target.value)}
                                 onKeyDown={(e) => handleKeyDown(e, commitment.id, dayKey)}
-                                className="h-7 w-14 text-center text-sm border-primary/50 focus:border-primary"
+                                className="h-6 w-12 text-center text-xs border-primary/50 focus:border-primary"
                                 autoFocus
                               />
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-emerald-600 dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
+                                className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-50"
                                 onClick={() => handleSaveEdit(commitment.id, dayKey)}
                               >
-                                <Check className="h-3.5 w-3.5" />
+                                <Check className="h-3 w-3" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                 onClick={handleCancelEdit}
                               >
-                                <X className="h-3.5 w-3.5" />
+                                <X className="h-3 w-3" />
                               </Button>
                             </div>
                           ) : (
                             <button
                               onClick={() => handleCellClick(commitment.id, dayKey, value)}
-                              className="w-full h-7 hover:bg-primary/10 hover:text-primary rounded px-2 transition-colors font-medium"
+                              className={cn(
+                                "w-full h-6 hover:bg-green-100 rounded px-1 transition-colors text-xs",
+                                value === 0 ? "text-muted-foreground/30" : "font-medium hover:text-green-700"
+                              )}
                             >
-                              {value}
+                              {value === 0 ? '—' : value}
                             </button>
                           )}
                         </TableCell>
                       )
                     })}
-                    <TableCell className="text-center text-sm font-medium">{commitment.totalCommitted}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
-                          onClick={() => handleSendToSupplier(commitment.party.name)}
-                          title="Send to supplier"
-                        >
-                          <Send className="h-3.5 w-3.5" />
-                        </Button>
+                    <TableCell className="text-center text-xs font-medium text-green-600 py-1">{commitment.totalCommitted}</TableCell>
+                    <TableCell className="py-1">
+                      <div className="flex items-center gap-0.5">
                         {onEditCommitment && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-blue-600 hover:bg-blue-50"
+                            className="h-6 w-6 text-muted-foreground hover:text-blue-600 hover:bg-blue-50"
                             onClick={() => onEditCommitment(target.routeKey, commitment.party.id, commitment.party.name)}
                             title="Edit commitment"
                           >
-                            <Edit2 className="h-3.5 w-3.5" />
+                            <Edit2 className="h-3 w-3" />
                           </Button>
                         )}
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => handleDeleteCommitment(commitment.id, commitment.party.name)}
+                          className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDeleteCommitment(commitment.id, commitment.party.name, target.routeKey)}
+                          title="Delete"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                     </TableCell>
@@ -770,51 +803,59 @@ export function SupplyTable({ data, isLoading, onAddCommitment, onEditCommitment
 
           // Add city totals row
           cityRows.push(
-            <TableRow key={`city-total-${originCity}-target`} className="bg-blue-50 hover:bg-blue-50 border-t border-border font-semibold">
-              <TableCell></TableCell>
-              <TableCell className="sticky left-0 bg-blue-50 text-sm uppercase text-blue-900">
+            <TableRow key={`city-total-${originCity}-target`} className="bg-slate-100/60 hover:bg-slate-100/80 border-t border-slate-200">
+              <TableCell className="py-1"></TableCell>
+              <TableCell className="sticky left-0 bg-slate-100/60 text-[11px] uppercase text-slate-700 font-bold py-1">
                 {originCity} Total
               </TableCell>
-              <TableCell></TableCell>
-              <TableCell></TableCell>
-              <TableCell></TableCell>
-              <TableCell className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Target</TableCell>
+              <TableCell className="py-1"></TableCell>
+              <TableCell className="py-1"></TableCell>
+              <TableCell className="py-1"></TableCell>
+              <TableCell className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/60 py-1">Target</TableCell>
               {WEEK_DAYS.map((day, index) => {
                 const key = `day${index + 1}` as keyof typeof cityTotals.target
+                const value = cityTotals.target[key]
                 return (
-                  <TableCell key={day.key} className="text-center font-bold text-sm text-blue-600">
-                    {cityTotals.target[key]}
+                  <TableCell key={day.key} className={cn(
+                    "text-center text-xs font-semibold py-1",
+                    value === 0 ? "text-slate-300" : "text-blue-600"
+                  )}>
+                    {value === 0 ? '—' : value}
                   </TableCell>
                 )
               })}
-              <TableCell className="text-center font-bold text-blue-600">{cityTotals.target.total}</TableCell>
-              <TableCell></TableCell>
+              <TableCell className="text-center font-semibold text-sm text-blue-600 py-1">{cityTotals.target.total}</TableCell>
+              <TableCell className="py-1"></TableCell>
             </TableRow>,
-            <TableRow key={`city-total-${originCity}-committed`} className="bg-blue-50 hover:bg-blue-50">
-              <TableCell></TableCell>
-              <TableCell className="sticky left-0 bg-blue-50"></TableCell>
-              <TableCell></TableCell>
-              <TableCell></TableCell>
-              <TableCell></TableCell>
-              <TableCell className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Committed</TableCell>
+            <TableRow key={`city-total-${originCity}-committed`} className="bg-slate-100/60 hover:bg-slate-100/80 border-b border-slate-200/50">
+              <TableCell className="py-1"></TableCell>
+              <TableCell className="sticky left-0 bg-slate-100/60 py-1"></TableCell>
+              <TableCell className="py-1"></TableCell>
+              <TableCell className="py-1"></TableCell>
+              <TableCell className="py-1"></TableCell>
+              <TableCell className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/60 py-1">Committed</TableCell>
               {WEEK_DAYS.map((day, index) => {
                 const key = `day${index + 1}` as keyof typeof cityTotals.committed
+                const value = cityTotals.committed[key]
                 return (
-                  <TableCell key={day.key} className="text-center font-bold text-sm text-emerald-700">
-                    {cityTotals.committed[key]}
+                  <TableCell key={day.key} className={cn(
+                    "text-center text-xs font-semibold py-1",
+                    value === 0 ? "text-slate-300" : "text-green-700"
+                  )}>
+                    {value === 0 ? '—' : value}
                   </TableCell>
                 )
               })}
-              <TableCell className="text-center font-bold text-emerald-700">{cityTotals.committed.total}</TableCell>
-              <TableCell></TableCell>
+              <TableCell className="text-center font-semibold text-sm text-green-700 py-1">{cityTotals.committed.total}</TableCell>
+              <TableCell className="py-1"></TableCell>
             </TableRow>,
-            <TableRow key={`city-total-${originCity}-gap`} className="bg-blue-50 hover:bg-blue-50 border-b-2 border-border">
-              <TableCell></TableCell>
-              <TableCell className="sticky left-0 bg-blue-50"></TableCell>
-              <TableCell></TableCell>
-              <TableCell></TableCell>
-              <TableCell></TableCell>
-              <TableCell className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Gap</TableCell>
+            <TableRow key={`city-total-${originCity}-gap`} className="bg-slate-100/60 hover:bg-slate-100/80 border-b-2 border-slate-300">
+              <TableCell className="py-1"></TableCell>
+              <TableCell className="sticky left-0 bg-slate-100/60 py-1"></TableCell>
+              <TableCell className="py-1"></TableCell>
+              <TableCell className="py-1"></TableCell>
+              <TableCell className="py-1"></TableCell>
+              <TableCell className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/60 py-1">Gap</TableCell>
               {WEEK_DAYS.map((day, index) => {
                 const key = `day${index + 1}` as keyof typeof cityTotals.gap
                 const value = cityTotals.gap[key]
@@ -823,27 +864,27 @@ export function SupplyTable({ data, isLoading, onAddCommitment, onEditCommitment
                   <TableCell
                     key={day.key}
                     className={cn(
-                      'text-center font-bold text-sm',
-                      displayValue > 0 && 'text-emerald-600',
+                      'text-center text-xs font-semibold py-1',
+                      displayValue > 0 && 'text-green-600',
                       displayValue < 0 && 'text-red-600',
-                      displayValue === 0 && 'text-muted-foreground'
+                      displayValue === 0 && 'text-slate-300'
                     )}
                   >
-                    {displayValue > 0 ? '+' : ''}{displayValue}
+                    {displayValue === 0 ? '—' : (displayValue > 0 ? '+' : '')}{displayValue === 0 ? '' : displayValue}
                   </TableCell>
                 )
               })}
               <TableCell
                 className={cn(
-                  'text-center font-bold',
-                  -cityTotals.gap.total > 0 && 'text-emerald-600',
+                  'text-center font-semibold text-sm py-1',
+                  -cityTotals.gap.total > 0 && 'text-green-600',
                   -cityTotals.gap.total < 0 && 'text-red-600',
-                  cityTotals.gap.total === 0 && 'text-muted-foreground'
+                  cityTotals.gap.total === 0 && 'text-slate-400'
                 )}
               >
                 {-cityTotals.gap.total > 0 ? '+' : ''}{-cityTotals.gap.total}
               </TableCell>
-              <TableCell></TableCell>
+              <TableCell className="py-1"></TableCell>
             </TableRow>
           )
 
@@ -851,6 +892,34 @@ export function SupplyTable({ data, isLoading, onAddCommitment, onEditCommitment
         })}
         </TableBody>
       </Table>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialog?.open || false} onOpenChange={(open) => !open && setDeleteDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Supply Commitment</DialogTitle>
+            <DialogDescription>
+              Delete commitment from <strong>{deleteDialog?.supplierName}</strong> for route <strong>{deleteDialog?.routeKey}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Would you like to delete this commitment for the current week only, or for all weeks in this planning cycle?
+            </p>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setDeleteDialog(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={() => handleConfirmDelete(false)}>
+              Delete Current Week Only
+            </Button>
+            <Button variant="destructive" onClick={() => handleConfirmDelete(true)}>
+              Delete All Weeks
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -193,6 +193,38 @@ export function WeekSelector({ value, onValueChange }: WeekSelectorProps) {
     }
   }
 
+  const handleCurrentWeek = () => {
+    const today = new Date()
+
+    // Find the week that contains today
+    if (data?.data) {
+      const currentWeek = data.data.find(week => {
+        const weekStart = new Date(week.weekStart)
+        const weekEnd = new Date(week.weekEnd)
+        return today >= weekStart && today <= weekEnd
+      })
+
+      if (currentWeek) {
+        onValueChange(currentWeek.id)
+        return
+      }
+    }
+
+    // If no planning week found, calculate the Sunday of this week
+    const currentWeekStart = new Date(today)
+    const dayOfWeek = currentWeekStart.getDay()
+    currentWeekStart.setDate(currentWeekStart.getDate() - dayOfWeek) // Go back to Sunday
+
+    // Check if this week exists in data
+    const weekId = getWeekIdForDate(currentWeekStart)
+    if (weekId) {
+      onValueChange(weekId)
+    } else {
+      // Pass date string for parent to handle
+      onValueChange(format(currentWeekStart, 'yyyy-MM-dd'))
+    }
+  }
+
   if (!mounted) {
     return (
       <div className="w-[280px] h-10 rounded-md border border-input bg-background flex items-center px-3 text-sm text-muted-foreground">
@@ -361,6 +393,16 @@ export function WeekSelector({ value, onValueChange }: WeekSelectorProps) {
       title="Next week"
     >
       <ChevronRight className="h-4 w-4" />
+    </Button>
+
+    {/* Current Week Button */}
+    <Button
+      variant="outline"
+      onClick={handleCurrentWeek}
+      className="h-10 px-3"
+      title="Jump to current week"
+    >
+      Current Week
     </Button>
   </div>
   )

@@ -39,11 +39,30 @@ export function IntelligenceFiltersComponent({
     enabled: !!planningWeekId,
   })
 
+  // Fetch unique supply planners from the supply commitments
+  const { data: supplyPlannersData } = useQuery({
+    queryKey: ['supply-planners', planningWeekId],
+    queryFn: async () => {
+      if (!planningWeekId) return []
+      const res = await fetch(`/api/supply/planners?planningWeekId=${planningWeekId}`)
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error?.message || 'Failed to load planners')
+      return json.data as Array<{ id: string; firstName: string; lastName: string }>
+    },
+    enabled: !!planningWeekId,
+  })
+
   const isCategoryEnabled = orgSettings?.demandCategoryEnabled || false
   const categoryLabel = orgSettings?.demandCategoryLabel || 'Category'
 
   const plannerOptions: MultiSelectOption[] =
     plannersData?.map((p) => ({
+      value: p.id,
+      label: `${p.firstName} ${p.lastName}`,
+    })) || []
+
+  const supplyPlannerOptions: MultiSelectOption[] =
+    supplyPlannersData?.map((p) => ({
       value: p.id,
       label: `${p.firstName} ${p.lastName}`,
     })) || []
@@ -70,6 +89,7 @@ export function IntelligenceFiltersComponent({
 
   const hasActiveFilters =
     (filters.plannerIds && filters.plannerIds.length > 0) ||
+    (filters.supplyPlannerIds && filters.supplyPlannerIds.length > 0) ||
     (filters.clientIds && filters.clientIds.length > 0) ||
     (filters.categoryIds && filters.categoryIds.length > 0) ||
     (filters.truckTypeIds && filters.truckTypeIds.length > 0) ||
@@ -78,6 +98,7 @@ export function IntelligenceFiltersComponent({
   const clearFilters = () => {
     onFiltersChange({
       plannerIds: [],
+      supplyPlannerIds: [],
       clientIds: [],
       categoryIds: [],
       truckTypeIds: [],
@@ -112,6 +133,17 @@ export function IntelligenceFiltersComponent({
                 value={filters.plannerIds || []}
                 onValueChange={(value) => onFiltersChange({ ...filters, plannerIds: value })}
                 placeholder="Demand Planner"
+                searchPlaceholder="Search planners..."
+                emptyText="No planners found"
+              />
+            </div>
+
+            <div className="min-w-[200px]">
+              <MultiSelectCombobox
+                options={supplyPlannerOptions}
+                value={filters.supplyPlannerIds || []}
+                onValueChange={(value) => onFiltersChange({ ...filters, supplyPlannerIds: value })}
+                placeholder="Supply Planner"
                 searchPlaceholder="Search planners..."
                 emptyText="No planners found"
               />

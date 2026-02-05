@@ -5,6 +5,7 @@ import type { Insight, RouteMetrics, SupplierContribution } from '@/lib/intellig
 
 export interface IntelligenceFilters {
   plannerIds?: string[]
+  supplyPlannerIds?: string[]
   clientIds?: string[]
   categoryIds?: string[]
   truckTypeIds?: string[]
@@ -89,6 +90,9 @@ export function useIntelligenceData(
       // Add filters
       if (filters?.plannerIds && filters.plannerIds.length > 0) {
         filters.plannerIds.forEach((id) => params.append('plannerIds', id))
+      }
+      if (filters?.supplyPlannerIds && filters.supplyPlannerIds.length > 0) {
+        filters.supplyPlannerIds.forEach((id) => params.append('supplyPlannerIds', id))
       }
       if (filters?.clientIds && filters.clientIds.length > 0) {
         filters.clientIds.forEach((id) => params.append('clientIds', id))

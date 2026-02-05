@@ -194,6 +194,9 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     }
 
     const { id } = await params
+    const { searchParams } = new URL(request.url)
+    const deleteAll = searchParams.get('deleteAll') === 'true'
+
     const existing = await prisma.supplyCommitment.findUnique({
       where: { id },
       include: {
@@ -219,7 +222,34 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       )
     }
 
-    await prisma.supplyCommitment.delete({ where: { id } })
+    let deletedCount = 0
+
+    if (deleteAll) {
+      // Find all matching commitments across all weeks
+      const matchingCommitments = await prisma.supplyCommitment.findMany({
+        where: {
+          organizationId: session.user.currentOrgId,
+          partyId: existing.partyId,
+          routeKey: existing.routeKey,
+          resourceTypeId: existing.resourceTypeId,
+        },
+        select: {
+          id: true,
+        },
+      })
+
+      // Delete all matching commitments
+      const result = await prisma.supplyCommitment.deleteMany({
+        where: {
+          id: { in: matchingCommitments.map(c => c.id) },
+        },
+      })
+      deletedCount = result.count
+    } else {
+      // Delete only the specified commitment
+      await prisma.supplyCommitment.delete({ where: { id } })
+      deletedCount = 1
+    }
 
     await createAuditLog({
       userId: session.user.id,
@@ -230,10 +260,18 @@ export async function DELETE(request: Request, { params }: RouteParams) {
         routeKey: existing.routeKey,
         partyId: existing.partyId,
         supplierName: existing.party?.name,
+        deleteAll,
+        deletedCount,
       },
     })
 
-    return NextResponse.json({ success: true, data: { message: 'Commitment deleted' } })
+    return NextResponse.json({
+      success: true,
+      data: {
+        message: deleteAll ? `${deletedCount} commitment(s) deleted` : 'Commitment deleted',
+        deletedCount
+      }
+    })
   } catch (error) {
     console.error('Delete supply commitment error:', error)
     return NextResponse.json(

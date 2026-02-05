@@ -26,6 +26,7 @@ export async function GET(request: Request) {
 
     // Get filter parameters
     const plannerIds = searchParams.getAll('plannerIds')
+    const supplyPlannerIds = searchParams.getAll('supplyPlannerIds')
     const clientIds = searchParams.getAll('clientIds')
     const categoryIds = searchParams.getAll('categoryIds')
     const truckTypeIds = searchParams.getAll('truckTypeIds')
@@ -67,9 +68,12 @@ export async function GET(request: Request) {
         },
         _count: { id: true },
       }),
-      // Get all supply commitments for this week (not filtered - show all commitments)
+      // Get supply commitments for this week (filtered by supply planners if specified)
       prisma.supplyCommitment.findMany({
-        where: orgScopedWhere(session, { planningWeekId }),
+        where: orgScopedWhere(session, {
+          planningWeekId,
+          ...(supplyPlannerIds.length > 0 && { createdById: { in: supplyPlannerIds } }),
+        }),
         include: {
           party: { select: { id: true, name: true } },
         },
