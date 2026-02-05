@@ -4,7 +4,7 @@ import { getSession } from '@/lib/auth'
 import { getOrCreatePlanningWeek } from '@/lib/planning-week'
 import { orgScopedWhere } from '@/lib/org-scoped'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getSession()
     if (!session) {
@@ -14,8 +14,24 @@ export async function GET() {
       )
     }
 
-    // Get current planning week (with org scoping)
-    const currentWeek = await getOrCreatePlanningWeek(new Date(), session.user.currentOrgId)
+    const { searchParams } = new URL(request.url)
+    const planningWeekId = searchParams.get('planningWeekId')
+
+    // Get planning week (use provided ID or get current week)
+    let currentWeek
+    if (planningWeekId) {
+      currentWeek = await prisma.planningWeek.findFirst({
+        where: orgScopedWhere(session, { id: planningWeekId }),
+      })
+      if (!currentWeek) {
+        return NextResponse.json(
+          { success: false, error: { code: 'NOT_FOUND', message: 'Planning week not found' } },
+          { status: 404 }
+        )
+      }
+    } else {
+      currentWeek = await getOrCreatePlanningWeek(new Date(), session.user.currentOrgId)
+    }
 
     // Get demand forecasts for current week (with org scoping)
     const forecasts = await prisma.demandForecast.findMany({

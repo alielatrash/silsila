@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,6 +11,8 @@ import { BarChart3, ClipboardList, Package, Truck, ArrowRight, Plus } from 'luci
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
+import { WeekSelector } from '@/components/demand/week-selector'
+import { usePlanningWeeks } from '@/hooks/use-demand'
 
 interface DashboardData {
   currentWeek: {
@@ -43,14 +46,39 @@ interface DashboardData {
 
 export default function DashboardPage() {
   const { data: auth } = useAuth()
+  const [selectedWeekId, setSelectedWeekId] = useState<string>()
+  const { data: weeksData } = usePlanningWeeks()
+
+  // Auto-select week: first try localStorage, then fall back to current week
+  useEffect(() => {
+    if (weeksData?.data?.length && !selectedWeekId) {
+      const savedWeekId = localStorage.getItem('selectedPlanningWeekId')
+      // Check if saved week exists in available weeks
+      const savedWeekExists = savedWeekId && weeksData.data.some(w => w.id === savedWeekId)
+      setSelectedWeekId(savedWeekExists ? savedWeekId : weeksData.data[0].id)
+    }
+  }, [weeksData, selectedWeekId])
+
+  const handleWeekChange = (weekId: string | undefined) => {
+    setSelectedWeekId(weekId)
+    // Save to localStorage for persistence across pages
+    if (weekId) {
+      localStorage.setItem('selectedPlanningWeekId', weekId)
+    }
+  }
+
   const { data, isLoading } = useQuery({
-    queryKey: ['dashboard'],
+    queryKey: ['dashboard', selectedWeekId],
     queryFn: async () => {
-      const res = await fetch('/api/dashboard')
+      const url = selectedWeekId
+        ? `/api/dashboard?planningWeekId=${selectedWeekId}`
+        : '/api/dashboard'
+      const res = await fetch(url)
       const json = await res.json()
       if (!json.success) throw new Error(json.error?.message || 'Failed to load dashboard')
       return json.data as DashboardData
     },
+    enabled: !!selectedWeekId,
   })
 
   const userRole = auth?.user?.role
@@ -64,7 +92,9 @@ export default function DashboardPage() {
         description={data?.currentWeek
           ? `Week ${data.currentWeek.weekNumber}, ${data.currentWeek.year} (${new Date(data.currentWeek.weekStart).toLocaleDateString()} - ${new Date(data.currentWeek.weekEnd).toLocaleDateString()})`
           : 'Overview of demand and supply planning'}
-      />
+      >
+        <WeekSelector value={selectedWeekId} onValueChange={handleWeekChange} />
+      </PageHeader>
 
       {/* Quick Actions */}
       {(canCreateDemand || canCreateSupply) && (
