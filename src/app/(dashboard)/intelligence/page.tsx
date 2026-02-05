@@ -31,15 +31,22 @@ export default function IntelligencePage() {
   const { data: weeksData } = usePlanningWeeks()
   const { data: intelligenceData, isLoading } = useIntelligenceData(selectedWeekId, filters)
 
-  // Auto-select first week on load
+  // Auto-select week: first try localStorage, then fall back to current week
   useEffect(() => {
     if (weeksData?.data?.length && !selectedWeekId) {
-      setSelectedWeekId(weeksData.data[0].id)
+      const savedWeekId = localStorage.getItem('selectedPlanningWeekId')
+      // Check if saved week exists in available weeks
+      const savedWeekExists = savedWeekId && weeksData.data.some(w => w.id === savedWeekId)
+      setSelectedWeekId(savedWeekExists ? savedWeekId : weeksData.data[0].id)
     }
   }, [weeksData, selectedWeekId])
 
   const handleWeekChange = (weekId: string | undefined) => {
     setSelectedWeekId(weekId)
+    // Save to localStorage for persistence across pages
+    if (weekId) {
+      localStorage.setItem('selectedPlanningWeekId', weekId)
+    }
     // Reset filters when week changes
     setFilters({
       plannerIds: [],

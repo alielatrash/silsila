@@ -5,9 +5,10 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2, Plus, CheckCircle2, Copy } from 'lucide-react'
 import { toast } from 'sonner'
-import { format, addWeeks } from 'date-fns'
+import { format, addWeeks, addDays, isBefore, startOfDay } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   Dialog,
@@ -64,6 +65,7 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0)
   const [weekCommitmentsData, setWeekCommitmentsData] = useState<Record<string, any>>({})
   const [existingCommitments, setExistingCommitments] = useState<Record<string, string>>({})
+  const [applyToRemainingWeeks, setApplyToRemainingWeeks] = useState(true)
 
   // Fetch suppliers with server-side search
   const { data: suppliers } = useSuppliers({
@@ -87,6 +89,14 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
   }, [planningWeeksData, planningWeekId])
 
   const currentWeek = availableWeeks[currentWeekIndex]
+
+  // Helper function to check if a day is in the past
+  const isDayInPast = (dayIndex: number) => {
+    if (!currentWeek) return false
+    const today = startOfDay(new Date())
+    const dayDate = startOfDay(addDays(new Date(currentWeek.weekStart), dayIndex))
+    return isBefore(dayDate, today)
+  }
 
   // Transform data for combobox (don't show UUID)
   const supplierOptions = useMemo(() =>
@@ -370,19 +380,28 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
       // Save current week data first
       saveCurrentWeekData()
 
-      // Combine all week data
-      const allWeekData = {
-        ...weekCommitmentsData,
-        [currentWeek.id]: {
-          supplierId: data.supplierId,
-          day1Committed: data.day1Committed,
-          day2Committed: data.day2Committed,
-          day3Committed: data.day3Committed,
-          day4Committed: data.day4Committed,
-          day5Committed: data.day5Committed,
-          day6Committed: data.day6Committed,
-          day7Committed: data.day7Committed,
-        }
+      // Auto-apply to remaining weeks if checkbox is checked
+      let allWeekData = { ...weekCommitmentsData }
+
+      const currentWeekData = {
+        supplierId: data.supplierId,
+        day1Committed: data.day1Committed,
+        day2Committed: data.day2Committed,
+        day3Committed: data.day3Committed,
+        day4Committed: data.day4Committed,
+        day5Committed: data.day5Committed,
+        day6Committed: data.day6Committed,
+        day7Committed: data.day7Committed,
+      }
+
+      allWeekData[currentWeek.id] = currentWeekData
+
+      // If "Apply to remaining weeks" is checked, copy current week data to all remaining weeks
+      if (applyToRemainingWeeks && availableWeeks.length > 1) {
+        const remainingWeeks = availableWeeks.slice(currentWeekIndex + 1)
+        remainingWeeks.forEach(week => {
+          allWeekData[week.id] = { ...currentWeekData }
+        })
       }
 
       // Filter weeks that have data (only check daily commitment fields)
@@ -535,17 +554,20 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
                       placeholder="Search supplier..."
                       searchPlaceholder="Type to search..."
                       emptyText="No suppliers found."
+                      disabled={!!editingSupplierId}
                       footerAction={
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="w-full justify-start text-xs"
-                          onClick={() => setIsSupplierDialogOpen(true)}
-                        >
-                          <Plus className="mr-2 h-3 w-3" />
-                          Add new supplier
-                        </Button>
+                        !editingSupplierId ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="w-full justify-start text-xs"
+                            onClick={() => setIsSupplierDialogOpen(true)}
+                          >
+                            <Plus className="mr-2 h-3 w-3" />
+                            Add new supplier
+                          </Button>
+                        ) : undefined
                       }
                     />
                   </FormControl>
@@ -651,6 +673,7 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
                           const gap = targetData.gap[`day${index + 1}` as keyof typeof targetData.gap] || 0
                           const newCommit = formValues[`day${index + 1}Committed` as keyof typeof formValues] as number || 0
                           const remaining = gap - newCommit
+                          const isPast = isDayInPast(index)
 
                           return (
                             <FormField
@@ -660,21 +683,21 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
                               render={({ field }) => (
                                 <FormItem className="space-y-1">
                                   <div className="flex flex-col items-center">
-                                    <FormLabel className="text-[11px] text-muted-foreground">
+                                    <FormLabel className={`text-[11px] ${isPast ? 'text-muted-foreground/50' : 'text-muted-foreground'}`}>
                                       {day.label}
                                     </FormLabel>
                                     <div className="h-[14px] flex items-center justify-center">
-                                      {remaining > 0 && (
+                                      {!isPast && remaining > 0 && (
                                         <span className="text-[10px] font-bold leading-none text-red-600">
                                           {remaining}
                                         </span>
                                       )}
-                                      {remaining === 0 && gap > 0 && (
+                                      {!isPast && remaining === 0 && gap > 0 && (
                                         <span className="text-[10px] font-bold leading-none text-emerald-600">
                                           ✓
                                         </span>
                                       )}
-                                      {remaining < 0 && (
+                                      {!isPast && remaining < 0 && (
                                         <span className="text-[10px] font-bold leading-none text-emerald-600">
                                           +{Math.abs(remaining)}
                                         </span>
@@ -688,15 +711,19 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
                                     <Input
                                       type="number"
                                       min="0"
-                                      placeholder="0"
+                                      placeholder=""
+                                      disabled={isPast}
                                       className={`text-center h-10 transition-colors ${
-                                        remaining > 0
+                                        isPast
+                                          ? 'bg-muted/50 text-muted-foreground/50 cursor-not-allowed'
+                                          : remaining > 0
                                           ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
                                           : (remaining <= 0 && newCommit > 0)
                                           ? 'border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500'
                                           : ''
                                       }`}
                                       {...field}
+                                      value={field.value === 0 ? '' : field.value}
                                       onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                                     />
                                   </FormControl>
@@ -707,16 +734,19 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
                         })}
                       </div>
                       {availableWeeks.length > 1 && currentWeekIndex < availableWeeks.length - 1 && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={applyToAllWeeks}
-                          className="w-full"
-                        >
-                          <Copy className="mr-2 h-3.5 w-3.5" />
-                          Apply to remaining {availableWeeks.length - currentWeekIndex - 1} week{availableWeeks.length - currentWeekIndex - 1 !== 1 ? 's' : ''}
-                        </Button>
+                        <div className="flex items-center space-x-2 pt-2">
+                          <Checkbox
+                            id="apply-to-remaining"
+                            checked={applyToRemainingWeeks}
+                            onCheckedChange={(checked) => setApplyToRemainingWeeks(checked === true)}
+                          />
+                          <label
+                            htmlFor="apply-to-remaining"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            Apply to remaining {availableWeeks.length - currentWeekIndex - 1} week{availableWeeks.length - currentWeekIndex - 1 !== 1 ? 's' : ''}
+                          </label>
+                        </div>
                       )}
                     </div>
                   )}
@@ -759,42 +789,51 @@ export function SupplyFormDialog({ open, onOpenChange, planningWeekId, routeKey,
                 ) : (
                   <div className="space-y-2">
                     <div className="grid grid-cols-7 gap-2">
-                      {WEEK_DAYS.map((day, index) => (
-                        <FormField
-                          key={day.key}
-                          control={form.control}
-                          name={`day${index + 1}Committed` as keyof CreateSupplyCommitmentInput}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-[11px] text-muted-foreground text-center block">
-                                {day.label}
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  placeholder="0"
-                                  className="text-center h-10"
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                      ))}
+                      {WEEK_DAYS.map((day, index) => {
+                        const isPast = isDayInPast(index)
+
+                        return (
+                          <FormField
+                            key={day.key}
+                            control={form.control}
+                            name={`day${index + 1}Committed` as keyof CreateSupplyCommitmentInput}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className={`text-[11px] ${isPast ? 'text-muted-foreground/50' : 'text-muted-foreground'} text-center block`}>
+                                  {day.label}
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    placeholder=""
+                                    disabled={isPast}
+                                    className={`text-center h-10 ${isPast ? 'bg-muted/50 text-muted-foreground/50 cursor-not-allowed' : ''}`}
+                                    {...field}
+                                    value={field.value === 0 ? '' : field.value}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        )
+                      })}
                     </div>
                     {availableWeeks.length > 1 && currentWeekIndex < availableWeeks.length - 1 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={applyToAllWeeks}
-                        className="w-full"
-                      >
-                        <Copy className="mr-2 h-3.5 w-3.5" />
-                        Apply to remaining {availableWeeks.length - currentWeekIndex - 1} week{availableWeeks.length - currentWeekIndex - 1 !== 1 ? 's' : ''}
-                      </Button>
+                      <div className="flex items-center space-x-2 pt-2">
+                        <Checkbox
+                          id="apply-to-remaining-no-target"
+                          checked={applyToRemainingWeeks}
+                          onCheckedChange={(checked) => setApplyToRemainingWeeks(checked === true)}
+                        />
+                        <label
+                          htmlFor="apply-to-remaining-no-target"
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          Apply to remaining {availableWeeks.length - currentWeekIndex - 1} week{availableWeeks.length - currentWeekIndex - 1 !== 1 ? 's' : ''}
+                        </label>
+                      </div>
                     )}
                   </div>
                 )}

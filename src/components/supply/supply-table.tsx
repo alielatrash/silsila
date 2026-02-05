@@ -78,9 +78,11 @@ interface SupplyTableProps {
   onEditCommitment?: (routeKey: string, supplierId: string, supplierName: string) => void
   planningWeekId?: string
   weekStart?: Date | string
+  collapsedCities?: Set<string>
+  onToggleCity?: (cityName: string) => void
 }
 
-export function SupplyTable({ data, isLoading, onAddCommitment, onEditCommitment, planningWeekId, weekStart }: SupplyTableProps) {
+export function SupplyTable({ data, isLoading, onAddCommitment, onEditCommitment, planningWeekId, weekStart, collapsedCities: externalCollapsedCities, onToggleCity: externalToggleCity }: SupplyTableProps) {
   const { data: planningWeeksData } = usePlanningWeeks()
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
   const [editingCell, setEditingCell] = useState<{ id: string; day: string } | null>(null)
@@ -92,17 +94,22 @@ export function SupplyTable({ data, isLoading, onAddCommitment, onEditCommitment
   const planningCycle = planningWeeksData?.meta?.planningCycle || 'WEEKLY'
   const isMonthlyPlanning = planningCycle === 'MONTHLY'
 
-  // Track collapsed city groups
-  const [collapsedCities, setCollapsedCities] = useState<Set<string>>(new Set())
+  // Track collapsed city groups (use external state if provided, otherwise internal)
+  const [internalCollapsedCities, setInternalCollapsedCities] = useState<Set<string>>(new Set())
+  const collapsedCities = externalCollapsedCities || internalCollapsedCities
 
   const toggleCity = (cityName: string) => {
-    const newCollapsed = new Set(collapsedCities)
-    if (newCollapsed.has(cityName)) {
-      newCollapsed.delete(cityName)
+    if (externalToggleCity) {
+      externalToggleCity(cityName)
     } else {
-      newCollapsed.add(cityName)
+      const newCollapsed = new Set(collapsedCities)
+      if (newCollapsed.has(cityName)) {
+        newCollapsed.delete(cityName)
+      } else {
+        newCollapsed.add(cityName)
+      }
+      setInternalCollapsedCities(newCollapsed)
     }
-    setCollapsedCities(newCollapsed)
   }
 
   // Group data by origin city
@@ -576,7 +583,6 @@ export function SupplyTable({ data, isLoading, onAddCommitment, onEditCommitment
                 <TableCell className="py-1.5">
                   <Button
                     size="sm"
-                    variant="outline"
                     className="h-6 gap-1 text-[11px] px-2"
                     onClick={() => onAddCommitment(target.routeKey)}
                   >

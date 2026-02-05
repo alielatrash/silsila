@@ -57,6 +57,10 @@ export default function DemandPlanningPage() {
     setSelectedWeekId(weekId)
     setPage(1)
     setSelectedIds(new Set())
+    // Save to localStorage for persistence across pages
+    if (weekId) {
+      localStorage.setItem('selectedPlanningWeekId', weekId)
+    }
   }
 
   // Reset page when filters change
@@ -149,10 +153,13 @@ export default function DemandPlanningPage() {
     document.body.removeChild(link)
   }
 
-  // Auto-select first (current) week
+  // Auto-select week: first try localStorage, then fall back to current week
   useEffect(() => {
     if (weeksData?.data?.length && !selectedWeekId) {
-      setSelectedWeekId(weeksData.data[0].id)
+      const savedWeekId = localStorage.getItem('selectedPlanningWeekId')
+      // Check if saved week exists in available weeks
+      const savedWeekExists = savedWeekId && weeksData.data.some(w => w.id === savedWeekId)
+      setSelectedWeekId(savedWeekExists ? savedWeekId : weeksData.data[0].id)
     }
   }, [weeksData, selectedWeekId])
 

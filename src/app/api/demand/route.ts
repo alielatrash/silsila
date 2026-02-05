@@ -30,8 +30,9 @@ export async function GET(request: Request) {
     const clientIds = searchParams.getAll('clientIds')
     const categoryIds = searchParams.getAll('categoryIds')
     const truckTypeIds = searchParams.getAll('truckTypeIds')
+    const businessTypes = searchParams.getAll('businessTypes')
 
-    console.log('[GET /api/demand] Query params:', { planningWeekId, partyId, routeKey, page, pageSize, plannerIds, clientIds, categoryIds, truckTypeIds })
+    console.log('[GET /api/demand] Query params:', { planningWeekId, partyId, routeKey, page, pageSize, plannerIds, clientIds, categoryIds, truckTypeIds, businessTypes })
 
     const where = orgScopedWhere(session, {
       ...(planningWeekId && { planningWeekId }),
@@ -40,6 +41,7 @@ export async function GET(request: Request) {
       ...(plannerIds.length > 0 && { createdById: { in: plannerIds } }),
       ...(clientIds.length > 0 && { partyId: { in: clientIds } }),
       ...(categoryIds.length > 0 && { demandCategoryId: { in: categoryIds } }),
+      ...(businessTypes.length > 0 && { businessType: { in: businessTypes } }),
       ...(truckTypeIds.length > 0 && {
         resourceTypes: {
           some: {
@@ -320,6 +322,7 @@ export async function POST(request: Request) {
         pickupLocationId: data.pickupCityId,
         dropoffLocationId: data.dropoffCityId,
         demandCategoryId: data.demandCategoryId || null,
+        businessType: data.businessType || 'REGULAR',
         day1Qty: data.day1Loads || 0,
         day2Qty: data.day2Loads || 0,
         day3Qty: data.day3Loads || 0,

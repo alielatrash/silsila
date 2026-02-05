@@ -525,6 +525,11 @@ model PlanningWeek {
   @@index([isCurrent])
 }
 
+enum BusinessType {
+  REGULAR // Consistent, long-term demand expected for 3+ months
+  ADHOC   // Short-term, inconsistent demand for 1-2 weeks
+}
+
 model DemandForecast {
   id String @id @default(cuid())
 
@@ -548,6 +553,7 @@ model DemandForecast {
   // Classification
   demandCategoryId String? // Optional: Organization-defined category (e.g., Domestic/Ports, Express/Standard)
   demandCategory   DemandCategory? @relation(fields: [demandCategoryId], references: [id])
+  businessType     BusinessType    @default(REGULAR) // Regular (consistent, long-term) vs Adhoc (short-term, inconsistent)
 
   // Resource types (many-to-many: a forecast can be fulfilled by any of these types)
   resourceTypes    DemandForecastResourceType[]

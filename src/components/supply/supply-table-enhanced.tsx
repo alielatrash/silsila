@@ -447,7 +447,6 @@ export function SupplyTableEnhanced({
                               <TableCell>
                                 <Button
                                   size="sm"
-                                  variant="outline"
                                   onClick={() => onAddCommitment(target.routeKey)}
                                   className="w-full"
                                 >

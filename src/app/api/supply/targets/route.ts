@@ -32,6 +32,28 @@ export async function GET(request: Request) {
     const truckTypeIds = searchParams.getAll('truckTypeIds')
     const cityIds = searchParams.getAll('cityIds')
 
+    // If supply planner filter is active, first get the route keys where they have commitments
+    let routeKeysWithCommitments: string[] | undefined
+    if (supplyPlannerIds.length > 0) {
+      const commitmentsForPlanners = await prisma.supplyCommitment.findMany({
+        where: orgScopedWhere(session, {
+          planningWeekId,
+          createdById: { in: supplyPlannerIds },
+        }),
+        select: { routeKey: true },
+        distinct: ['routeKey'],
+      })
+      routeKeysWithCommitments = commitmentsForPlanners.map(c => c.routeKey)
+
+      // If supply planner has no commitments, return empty array early
+      if (routeKeysWithCommitments.length === 0) {
+        return NextResponse.json({
+          success: true,
+          data: [],
+        })
+      }
+    }
+
     // Build where clause with filters
     const demandWhereClause = orgScopedWhere(session, {
       planningWeekId,
@@ -48,6 +70,8 @@ export async function GET(request: Request) {
       ...(cityIds.length > 0 && {
         pickupLocationId: { in: cityIds }
       }),
+      // Filter by route keys if supply planner filter is active
+      ...(routeKeysWithCommitments && { routeKey: { in: routeKeysWithCommitments } }),
     })
 
     // Run queries in parallel for better performance (with org scoping)

@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2, Plus, CheckCircle2, Copy } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -86,6 +87,7 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0)
   const [weekLoadsData, setWeekLoadsData] = useState<Record<string, any>>({})
   const [existingForecasts, setExistingForecasts] = useState<Set<string>>(new Set())
+  const [applyToRemainingWeeks, setApplyToRemainingWeeks] = useState(true)
 
   // Fetch organization settings to check if category is enabled
   const { data: orgSettings } = useOrganizationSettings()
@@ -127,6 +129,7 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
       pickupCityId: '',
       dropoffCityId: '',
       demandCategoryId: '',
+      businessType: 'REGULAR',
       truckTypeIds: [],
       day1Loads: undefined,
       day2Loads: undefined,
@@ -379,6 +382,7 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
           pickupCityId: forecast.pickupLocationId,
           dropoffCityId: forecast.dropoffLocationId,
           demandCategoryId: forecast.demandCategoryId || '',
+          businessType: forecast.businessType || 'REGULAR',
           truckTypeIds: forecast.resourceTypes?.map(rt => rt.id) || [],
           day1Loads: forecast.day1Qty,
           day2Loads: forecast.day2Qty,
@@ -399,6 +403,7 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
           pickupCityId: '',
           dropoffCityId: '',
           demandCategoryId: '',
+          businessType: 'REGULAR',
           truckTypeIds: [],
           day1Loads: undefined,
           day2Loads: undefined,
@@ -424,21 +429,32 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
       saveCurrentWeekData()
 
       // Collect all weeks that have data
-      const allWeekData = { ...weekLoadsData }
+      let allWeekData = { ...weekLoadsData }
+
+      const formData = form.getValues()
+      const currentWeekData = {
+        day1Loads: formData.day1Loads,
+        day2Loads: formData.day2Loads,
+        day3Loads: formData.day3Loads,
+        day4Loads: formData.day4Loads,
+        day5Loads: formData.day5Loads,
+        day6Loads: formData.day6Loads,
+        day7Loads: formData.day7Loads,
+        week1Loads: formData.week1Loads,
+        week2Loads: formData.week2Loads,
+        week3Loads: formData.week3Loads,
+        week4Loads: formData.week4Loads,
+      }
+
       if (currentWeek) {
-        const formData = form.getValues()
-        allWeekData[currentWeek.id] = {
-          day1Loads: formData.day1Loads,
-          day2Loads: formData.day2Loads,
-          day3Loads: formData.day3Loads,
-          day4Loads: formData.day4Loads,
-          day5Loads: formData.day5Loads,
-          day6Loads: formData.day6Loads,
-          day7Loads: formData.day7Loads,
-          week1Loads: formData.week1Loads,
-          week2Loads: formData.week2Loads,
-          week3Loads: formData.week3Loads,
-          week4Loads: formData.week4Loads,
+        allWeekData[currentWeek.id] = currentWeekData
+
+        // Auto-apply to remaining weeks if checkbox is checked
+        if (applyToRemainingWeeks && availableWeeks.length > 1) {
+          const remainingWeeks = availableWeeks.slice(currentWeekIndex + 1)
+          remainingWeeks.forEach(week => {
+            allWeekData[week.id] = { ...currentWeekData }
+          })
         }
       }
 
@@ -755,6 +771,31 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="businessType"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-2 space-y-0 rounded-md border px-3 py-2">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value === 'REGULAR'}
+                      onCheckedChange={(checked) => {
+                        field.onChange(checked ? 'REGULAR' : 'ADHOC')
+                      }}
+                    />
+                  </FormControl>
+                  <div className="space-y-0.5 leading-none">
+                    <FormLabel className="cursor-pointer text-sm">
+                      Regular Business
+                    </FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      Consistent demand expected for 3+ months. Uncheck for adhoc/short-term demand (1-2 weeks).
+                    </p>
+                  </div>
+                </FormItem>
+              )}
+            />
+
             <div>
               <FormLabel>{isMonthlyPlanning ? 'Weekly Loads (Week 1-4)' : 'Daily Loads (Sun-Sat)'}</FormLabel>
               {isMonthlyPlanning ? (
@@ -791,16 +832,19 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
                     ))}
                   </div>
                   {availableWeeks.length > 1 && currentWeekIndex < availableWeeks.length - 1 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={applyToAllWeeks}
-                      className="w-full"
-                    >
-                      <Copy className="mr-2 h-3.5 w-3.5" />
-                      Apply to remaining {availableWeeks.length - currentWeekIndex - 1} week{availableWeeks.length - currentWeekIndex - 1 !== 1 ? 's' : ''}
-                    </Button>
+                    <div className="flex items-center space-x-2 pt-2">
+                      <Checkbox
+                        id="apply-to-remaining-demand"
+                        checked={applyToRemainingWeeks}
+                        onCheckedChange={(checked) => setApplyToRemainingWeeks(checked === true)}
+                      />
+                      <label
+                        htmlFor="apply-to-remaining-demand"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        Apply to remaining {availableWeeks.length - currentWeekIndex - 1} week{availableWeeks.length - currentWeekIndex - 1 !== 1 ? 's' : ''}
+                      </label>
+                    </div>
                   )}
                 </div>
               ) : (
@@ -848,16 +892,19 @@ export function DemandFormDialog({ open, onOpenChange, planningWeekId, forecast 
                     })}
                   </div>
                   {availableWeeks.length > 1 && currentWeekIndex < availableWeeks.length - 1 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={applyToAllWeeks}
-                      className="w-full"
-                    >
-                      <Copy className="mr-2 h-3.5 w-3.5" />
-                      Apply to remaining {availableWeeks.length - currentWeekIndex - 1} week{availableWeeks.length - currentWeekIndex - 1 !== 1 ? 's' : ''}
-                    </Button>
+                    <div className="flex items-center space-x-2 pt-2">
+                      <Checkbox
+                        id="apply-to-remaining-demand-weekly"
+                        checked={applyToRemainingWeeks}
+                        onCheckedChange={(checked) => setApplyToRemainingWeeks(checked === true)}
+                      />
+                      <label
+                        htmlFor="apply-to-remaining-demand-weekly"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        Apply to remaining {availableWeeks.length - currentWeekIndex - 1} week{availableWeeks.length - currentWeekIndex - 1 !== 1 ? 's' : ''}
+                      </label>
+                    </div>
                   )}
                 </div>
               )}

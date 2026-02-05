@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Download, Table2, LayoutGrid, Flame } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Download, Table2, LayoutGrid, Flame, ChevronsDownUp, ChevronsUpDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/layout'
 import { WeekSelector } from '@/components/demand/week-selector'
@@ -22,6 +22,7 @@ export default function SupplyPlanningPage() {
   const [selectedCitym, setSelectedCitym] = useState<string>('')
   const [editingSupplierId, setEditingSupplierId] = useState<string>('')
   const [viewMode, setViewMode] = useState<ViewMode>('detailed')
+  const [collapsedCities, setCollapsedCities] = useState<Set<string>>(new Set())
   const [filters, setFilters] = useState<SupplyFilters>({
     plannerIds: [],
     supplyPlannerIds: [],
@@ -38,15 +39,22 @@ export default function SupplyPlanningPage() {
   const currentWeekStart = weeksData?.data?.find(w => w.id === selectedWeekId)?.weekStart
   const weekStartString = currentWeekStart ? new Date(currentWeekStart).toISOString() : undefined
 
-  // Auto-select first (current) week
+  // Auto-select week: first try localStorage, then fall back to current week
   useEffect(() => {
     if (weeksData?.data?.length && !selectedWeekId) {
-      setSelectedWeekId(weeksData.data[0].id)
+      const savedWeekId = localStorage.getItem('selectedPlanningWeekId')
+      // Check if saved week exists in available weeks
+      const savedWeekExists = savedWeekId && weeksData.data.some(w => w.id === savedWeekId)
+      setSelectedWeekId(savedWeekExists ? savedWeekId : weeksData.data[0].id)
     }
   }, [weeksData, selectedWeekId])
 
   const handleWeekChange = (weekId: string | undefined) => {
     setSelectedWeekId(weekId)
+    // Save to localStorage for persistence across pages
+    if (weekId) {
+      localStorage.setItem('selectedPlanningWeekId', weekId)
+    }
   }
 
   const handleFiltersChange = (newFilters: SupplyFilters) => {
@@ -64,6 +72,39 @@ export default function SupplyPlanningPage() {
     setEditingSupplierId(supplierId)
     setIsDialogOpen(true)
   }
+
+  // Get all unique cities from the data
+  const allCities = useMemo(() => {
+    if (!targetsData?.data) return []
+    const cities = new Set<string>()
+    targetsData.data.forEach(target => {
+      const originCity = target.routeKey.split('->')[0] || 'Unknown'
+      cities.add(originCity)
+    })
+    return Array.from(cities)
+  }, [targetsData?.data])
+
+  const handleToggleCity = (cityName: string) => {
+    const newCollapsed = new Set(collapsedCities)
+    if (newCollapsed.has(cityName)) {
+      newCollapsed.delete(cityName)
+    } else {
+      newCollapsed.add(cityName)
+    }
+    setCollapsedCities(newCollapsed)
+  }
+
+  const handleToggleAllCities = (collapsed: boolean) => {
+    if (collapsed) {
+      // Collapse all cities
+      setCollapsedCities(new Set(allCities))
+    } else {
+      // Expand all cities
+      setCollapsedCities(new Set())
+    }
+  }
+
+  const areAllCitiesCollapsed = allCities.length > 0 && collapsedCities.size === allCities.length
 
   const handleDownload = () => {
     if (!targetsData?.data?.length) return
@@ -173,25 +214,47 @@ export default function SupplyPlanningPage() {
             onFiltersChange={handleFiltersChange}
           />
 
-          {/* View Mode Selector */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-muted-foreground">View:</span>
-            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
-              <TabsList>
-                <TabsTrigger value="detailed" className="gap-2">
-                  <Table2 className="h-4 w-4" />
-                  Detailed
-                </TabsTrigger>
-                <TabsTrigger value="compact" className="gap-2">
-                  <LayoutGrid className="h-4 w-4" />
-                  Compact
-                </TabsTrigger>
-                <TabsTrigger value="heatmap" className="gap-2">
-                  <Flame className="h-4 w-4" />
-                  Heatmap
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+          {/* View Mode Selector and Collapse/Expand All */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground">View:</span>
+              <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
+                <TabsList>
+                  <TabsTrigger value="detailed" className="gap-2">
+                    <Table2 className="h-4 w-4" />
+                    Detailed
+                  </TabsTrigger>
+                  <TabsTrigger value="compact" className="gap-2">
+                    <LayoutGrid className="h-4 w-4" />
+                    Compact
+                  </TabsTrigger>
+                  <TabsTrigger value="heatmap" className="gap-2">
+                    <Flame className="h-4 w-4" />
+                    Heatmap
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+            {viewMode === 'detailed' && allCities.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleToggleAllCities(!areAllCitiesCollapsed)}
+                className="gap-2"
+              >
+                {areAllCitiesCollapsed ? (
+                  <>
+                    <ChevronsDownUp className="h-4 w-4" />
+                    Expand All Cities
+                  </>
+                ) : (
+                  <>
+                    <ChevronsUpDown className="h-4 w-4" />
+                    Collapse All Cities
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -228,6 +291,8 @@ export default function SupplyPlanningPage() {
               onEditCommitment={handleEditCommitment}
               planningWeekId={selectedWeekId}
               weekStart={weekStartString}
+              collapsedCities={collapsedCities}
+              onToggleCity={handleToggleCity}
             />
           )}
           {viewMode === 'compact' && (

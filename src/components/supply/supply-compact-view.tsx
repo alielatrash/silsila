@@ -269,7 +269,6 @@ export function SupplyCompactView({
                             <TableCell className="text-right">
                               <Button
                                 size="sm"
-                                variant="outline"
                                 onClick={() => onAddCommitment(target.routeKey)}
                               >
                                 <Plus className="h-4 w-4" />
