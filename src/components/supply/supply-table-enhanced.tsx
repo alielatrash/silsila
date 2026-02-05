@@ -153,7 +153,7 @@ export function SupplyTableEnhanced({
   const handleDeleteCommitment = async (id: string, supplierName: string) => {
     if (!confirm(`Delete commitment from ${supplierName}?`)) return
     try {
-      await deleteMutation.mutateAsync(id)
+      await deleteMutation.mutateAsync({ id, deleteAll: false })
       toast.success('Commitment deleted')
     } catch (error) {
       toast.error('Failed to delete commitment')
