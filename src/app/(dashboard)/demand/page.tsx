@@ -61,7 +61,7 @@ export default function DemandPlanningPage() {
     if (!confirm(`Are you sure you want to delete ${selectedIds.size} forecast(s)?`)) return
 
     try {
-      const deletePromises = Array.from(selectedIds).map(id => deleteMutation.mutateAsync(id))
+      const deletePromises = Array.from(selectedIds).map(id => deleteMutation.mutateAsync({ id, deleteAll: false }))
       await Promise.all(deletePromises)
       toast.success(`${selectedIds.size} forecast(s) deleted successfully`)
       setSelectedIds(new Set())
