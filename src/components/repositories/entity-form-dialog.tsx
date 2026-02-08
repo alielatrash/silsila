@@ -38,7 +38,7 @@ interface FormFieldConfig {
   label: string
   placeholder?: string
   required?: boolean
-  type?: 'text' | 'phone' | 'number' | 'select'
+  type?: 'text' | 'email' | 'phone' | 'number' | 'select'
   options?: Array<{ value: string; label: string }>
   isLoadingOptions?: boolean
 }
@@ -104,6 +104,7 @@ export function EntityFormDialog<T extends FieldValues>({
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             {fields.map((field) => {
               const isPhoneField = field.type === 'phone' || field.name === 'phoneNumber'
+              const isEmailField = field.type === 'email'
               const isNumberField = field.type === 'number'
               const isSelectField = field.type === 'select'
               const placeholder = isPhoneField ? phoneConfig.placeholder : field.placeholder
@@ -139,7 +140,7 @@ export function EntityFormDialog<T extends FieldValues>({
                           </Select>
                         ) : (
                           <Input
-                            type={isNumberField ? 'number' : 'text'}
+                            type={isNumberField ? 'number' : isEmailField ? 'email' : 'text'}
                             placeholder={placeholder}
                             {...formField}
                             value={formField.value as string || ''}
