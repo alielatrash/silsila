@@ -87,11 +87,19 @@ export default function OrganizationsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Organizations</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Manage all organizations on the platform
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Organizations</h1>
+          <p className="mt-2 text-sm text-gray-600">
+            Manage all organizations on the platform
+          </p>
+        </div>
+        <Link href="/superadmin/organizations/new">
+          <Button className="bg-blue-600 hover:bg-blue-700">
+            <Building2 className="h-4 w-4 mr-2" />
+            Create Organization
+          </Button>
+        </Link>
       </div>
 
       {/* Filters */}
