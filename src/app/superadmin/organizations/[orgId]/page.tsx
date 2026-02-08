@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { AlertCircle, Building2, Users, Activity, CheckCircle, XCircle } from 'lucide-react'
+import { AlertCircle, Building2, Users, Activity, CheckCircle, XCircle, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 export default function OrganizationDetailPage({ params }: { params: Promise<{ orgId: string }> }) {
   const resolvedParams = use(params)
+  const router = useRouter()
   const [org, setOrg] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
@@ -138,6 +140,35 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ o
     }
   }
 
+  async function handleAccessOrganization() {
+    setActionLoading(true)
+    try {
+      const response = await fetch('/api/organizations/switch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organizationId: resolvedParams.orgId }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast.success(`Switched to ${org.name}`)
+        // Redirect to the main dashboard
+        router.push('/dashboard')
+        // Force a full page refresh to reload all queries with new org context
+        setTimeout(() => {
+          window.location.href = '/dashboard'
+        }, 100)
+      } else {
+        toast.error(data.error?.message || 'Failed to switch organization')
+      }
+    } catch (error) {
+      toast.error('Failed to switch organization')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   if (loading) {
     return <div className="text-center py-8">Loading...</div>
   }
@@ -168,6 +199,14 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ o
         </div>
 
         <div className="flex gap-2">
+          <Button
+            onClick={handleAccessOrganization}
+            disabled={actionLoading || org.status === 'SUSPENDED'}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <LogIn className="h-4 w-4 mr-2" />
+            Access Organization
+          </Button>
           {org.status === 'SUSPENDED' ? (
             <Button onClick={handleUnsuspend} disabled={actionLoading}>
               <CheckCircle className="h-4 w-4 mr-2" />

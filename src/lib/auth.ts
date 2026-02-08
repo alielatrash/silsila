@@ -59,6 +59,10 @@ export async function getSession(): Promise<Session | null> {
       return null
     }
 
+    // Check if user is a platform admin
+    const { getPlatformAdmin } = await import('./platform-admin')
+    const platformAdmin = await getPlatformAdmin(session.user.id)
+
     // Get user's organization memberships
     const memberships = await prisma.organizationMember.findMany({
       where: { userId: session.user.id },
@@ -69,14 +73,14 @@ export async function getSession(): Promise<Session | null> {
       },
     })
 
-    // If user has no memberships, return null (shouldn't happen in normal flow)
-    if (memberships.length === 0) {
+    // If user has no memberships and is not a platform admin, return null
+    if (memberships.length === 0 && !platformAdmin) {
       return null
     }
 
-    // If user has no currentOrgId, set it to their first org
+    // If user has no currentOrgId, set it to their first org (if they have any)
     let currentOrgId = session.user.currentOrgId
-    if (!currentOrgId) {
+    if (!currentOrgId && memberships.length > 0) {
       currentOrgId = memberships[0].organizationId
       await prisma.user.update({
         where: { id: session.user.id },
@@ -85,7 +89,35 @@ export async function getSession(): Promise<Session | null> {
     }
 
     // Find the current organization membership
-    const currentMembership = memberships.find(m => m.organizationId === currentOrgId) || memberships[0]
+    let currentMembership = memberships.find(m => m.organizationId === currentOrgId)
+
+    // If no membership found but currentOrgId exists (platform admin accessing non-member org)
+    if (!currentMembership && currentOrgId && platformAdmin) {
+      const org = await prisma.organization.findUnique({
+        where: { id: currentOrgId },
+        select: { id: true, name: true, slug: true },
+      })
+
+      if (org) {
+        // Create a synthetic membership for platform admin
+        currentMembership = {
+          id: 'platform-admin',
+          organizationId: org.id,
+          userId: session.user.id,
+          role: 'ADMIN' as const,
+          functionalRole: 'ADMIN' as const,
+          joinedAt: new Date(),
+          invitedBy: null,
+          organization: org,
+        }
+      } else {
+        // Org not found, fall back to first membership
+        currentMembership = memberships[0]
+      }
+    } else if (!currentMembership) {
+      // No current membership and not a special case, use first available
+      currentMembership = memberships[0]
+    }
 
     // Update last active asynchronously (don't block the response)
     // Only update if last active was more than 5 minutes ago

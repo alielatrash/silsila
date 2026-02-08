@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 import { createAuditLog, AuditAction } from '@/lib/audit'
+import { getPlatformAdmin } from '@/lib/platform-admin'
 import { z } from 'zod'
 
 // Validation schema for switching organization
@@ -39,7 +40,10 @@ export async function POST(request: Request) {
 
     const { organizationId } = validationResult.data
 
-    // Verify user is a member of the target organization
+    // Check if user is a platform admin
+    const platformAdmin = await getPlatformAdmin(session.user.id)
+
+    // Verify user is a member of the target organization OR is a platform admin
     const membership = await prisma.organizationMember.findUnique({
       where: {
         organizationId_userId: {
@@ -59,7 +63,8 @@ export async function POST(request: Request) {
       },
     })
 
-    if (!membership) {
+    // If not a member and not a platform admin, deny access
+    if (!membership && !platformAdmin) {
       return NextResponse.json(
         {
           success: false,
@@ -72,7 +77,43 @@ export async function POST(request: Request) {
       )
     }
 
-    if (!membership.organization.isActive) {
+    // If platform admin but not a member, fetch the organization directly
+    let targetOrg = membership?.organization
+    let userRole = membership?.role || 'ADMIN' // Default to ADMIN for platform admins
+    let userFunctionalRole = membership?.functionalRole || 'ADMIN'
+
+    if (!membership && platformAdmin) {
+      const org = await prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          isActive: true,
+          status: true,
+        },
+      })
+
+      if (!org) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: 'ORG_NOT_FOUND',
+              message: 'Organization not found',
+            },
+          },
+          { status: 404 }
+        )
+      }
+
+      targetOrg = org
+      // Platform admins get ADMIN role when accessing organizations
+      userRole = 'ADMIN'
+      userFunctionalRole = 'ADMIN'
+    }
+
+    if (!targetOrg?.isActive) {
       return NextResponse.json(
         {
           success: false,
@@ -100,20 +141,21 @@ export async function POST(request: Request) {
       metadata: {
         fromOrg: session.user.currentOrgId,
         toOrg: organizationId,
-        orgName: membership.organization.name,
+        orgName: targetOrg.name,
+        isPlatformAdminAccess: !!platformAdmin && !membership,
       },
     })
 
     return NextResponse.json({
       success: true,
       data: {
-        message: `Switched to ${membership.organization.name}`,
+        message: `Switched to ${targetOrg.name}${platformAdmin && !membership ? ' (Platform Admin Access)' : ''}`,
         organization: {
-          id: membership.organization.id,
-          name: membership.organization.name,
-          slug: membership.organization.slug,
-          role: membership.role,
-          functionalRole: membership.functionalRole,
+          id: targetOrg.id,
+          name: targetOrg.name,
+          slug: targetOrg.slug,
+          role: userRole,
+          functionalRole: userFunctionalRole,
         },
       },
     })

@@ -6,10 +6,13 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Search, Building2, Users } from 'lucide-react'
+import { Search, Building2, Users, LogIn } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 export default function OrganizationsPage() {
+  const router = useRouter()
   const [organizations, setOrganizations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -17,6 +20,7 @@ export default function OrganizationsPage() {
   const [tier, setTier] = useState('')
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState<any>(null)
+  const [switchingOrgId, setSwitchingOrgId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchOrganizations()
@@ -45,6 +49,38 @@ export default function OrganizationsPage() {
       console.error('Failed to fetch organizations:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleAccessOrganization(orgId: string, orgName: string, e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+
+    setSwitchingOrgId(orgId)
+    try {
+      const response = await fetch('/api/organizations/switch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organizationId: orgId }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast.success(`Switched to ${orgName}`)
+        // Redirect to the main dashboard
+        router.push('/dashboard')
+        // Force a full page refresh to reload all queries with new org context
+        setTimeout(() => {
+          window.location.href = '/dashboard'
+        }, 100)
+      } else {
+        toast.error(data.error?.message || 'Failed to switch organization')
+      }
+    } catch (error) {
+      toast.error('Failed to switch organization')
+    } finally {
+      setSwitchingOrgId(null)
     }
   }
 
@@ -134,44 +170,54 @@ export default function OrganizationsPage() {
           ) : (
             <div className="space-y-2">
               {organizations.map((org) => (
-                <Link
-                  key={org.id}
-                  href={`/superadmin/organizations/${org.id}`}
-                  className="block"
-                >
-                  <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-gray-50">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3">
-                        <Building2 className="h-5 w-5 text-gray-400 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {org.name}
-                            </p>
-                            <Badge variant={org.status === 'ACTIVE' ? 'default' : 'destructive'}>
-                              {org.status}
-                            </Badge>
-                            <Badge variant="secondary">{org.subscriptionTier}</Badge>
-                          </div>
-                          <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
-                            <span className="flex items-center gap-1">
-                              <Users className="h-3 w-3" />
-                              {org.memberCount} members
-                            </span>
-                            <span>
-                              Created {new Date(org.createdAt).toLocaleDateString()}
-                            </span>
-                            {org.lastActivityAt && (
-                              <span>
-                                Last active {new Date(org.lastActivityAt).toLocaleDateString()}
+                <div key={org.id} className="flex items-center gap-2">
+                  <Link
+                    href={`/superadmin/organizations/${org.id}`}
+                    className="block flex-1"
+                  >
+                    <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-gray-50">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3">
+                          <Building2 className="h-5 w-5 text-gray-400 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {org.name}
+                              </p>
+                              <Badge variant={org.status === 'ACTIVE' ? 'default' : 'destructive'}>
+                                {org.status}
+                              </Badge>
+                              <Badge variant="secondary">{org.subscriptionTier}</Badge>
+                            </div>
+                            <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
+                              <span className="flex items-center gap-1">
+                                <Users className="h-3 w-3" />
+                                {org.memberCount} members
                               </span>
-                            )}
+                              <span>
+                                Created {new Date(org.createdAt).toLocaleDateString()}
+                              </span>
+                              {org.lastActivityAt && (
+                                <span>
+                                  Last active {new Date(org.lastActivityAt).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                  <Button
+                    size="sm"
+                    onClick={(e) => handleAccessOrganization(org.id, org.name, e)}
+                    disabled={org.status === 'SUSPENDED' || switchingOrgId === org.id}
+                    className="bg-blue-600 hover:bg-blue-700 shrink-0"
+                  >
+                    <LogIn className="h-4 w-4 mr-1" />
+                    {switchingOrgId === org.id ? 'Switching...' : 'Access'}
+                  </Button>
+                </div>
               ))}
             </div>
           )}
