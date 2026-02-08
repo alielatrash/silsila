@@ -791,6 +791,15 @@ export function SupplyTable({ data, isLoading, onAddCommitment, onEditCommitment
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-green-600 hover:bg-green-50"
+                          onClick={() => handleSendToSupplier(commitment.party.name)}
+                          title="Send to supplier"
+                        >
+                          <Send className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                           onClick={() => handleDeleteCommitment(commitment.id, commitment.party.name, target.routeKey)}
                           title="Delete"
